@@ -4,6 +4,4 @@ title: Publications
 permalink: /publications/
 ---
 
-# Publications
-
-Coming Soon...
+<p style="font-size: 1.2em; font-weight: bold;">Coming Soon...</p>
