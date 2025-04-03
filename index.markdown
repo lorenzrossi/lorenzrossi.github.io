@@ -6,7 +6,7 @@ layout: default
 title: Lorenzo Rossi
 ---
 
-<div style="display: flex; flex-direction: row; gap: 80px; max-width: 1000px; margin: 0 auto; padding: 40px 20px; align-items: flex-start;">
+<div style="display: flex; flex-direction: row; gap: 200px; max-width: 1000px; margin: 0 auto; padding: 40px 20px; align-items: flex-start;">
 
   <!-- LEFT: Photo + Info -->
   <div style="flex: 1; max-width: 250px; text-align: center;">
@@ -24,7 +24,7 @@ title: Lorenzo Rossi
         <img src="https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/maildotru.svg" width="20" style="margin-right: 10px;">
       </a>
       <a href="https://www.linkedin.com/in/lorenzo-rossi-227979168" title="LinkedIn">
-        <img src="https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/linkedin.svg" width="20" style="margin-right: 10px;">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/8/81/LinkedIn_icon.svg" width="20" style="margin-right: 10px;" alt="LinkedIn">
       </a>
       <a href="https://github.com/lorenzrossi" title="GitHub">
         <img src="https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/github.svg" width="20" style="margin-right: 10px;">
@@ -46,7 +46,7 @@ title: Lorenzo Rossi
       <a href="https://demm.unimi.it/it">University of Milan</a>.
     </p>
 
-    <p><strong>My research interests</strong> span across Econometrics and Computational Statistics such as:</p>
+    <p>My research interests span across Econometrics and Computational Statistics such as:</p>
     <ul>
       <li>Time series forecasting</li>
       <li>Bayesian statistics</li>
