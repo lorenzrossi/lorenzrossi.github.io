@@ -21,18 +21,18 @@
 title: Lorenzo Rossi
 email: Lorenzo.rossi1@unimi.it
 description: > 
-Ph.D. Candidate in Economics (University of Milan and University of Pavia)
+  Ph.D. Candidate in Economics (University of Milan and University of Pavia)
 
 baseurl: "" # the subpath of your site, e.g. /blog
 url: "https://lorenzrossi.github.io" # the base hostname & protocol for your site, e.g. http://example.com
 # twitter_username: jekyllrb
-github_username:  lorenzrossi
+github_username: lorenzrossi
 
 # Build settings
 theme: minima
 plugins:
   - jekyll-feed
-  - Jekyll-seo-tag
+  - jekyll-seo-tag
 
 author:
   name: Lorenzo Rossi
