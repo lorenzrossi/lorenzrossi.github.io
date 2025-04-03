@@ -4,4 +4,5 @@ title: Teaching
 permalink: /teaching/
 ---
 
-<p style="font-size: 1.2em; font-weight: bold;">Coming Soon...</p>
+<h2 style="margin-left: 40px;">Teaching</h2>
+<p style="margin-left: 40px;">Coming Soon…</p>
