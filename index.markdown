@@ -9,7 +9,7 @@ title: Lorenzo Rossi
 <div style="display: flex; flex-direction: row; gap: 200px; max-width: 1000px; margin: 0 auto; padding: 40px 20px; align-items: flex-start;">
 
   <!-- LEFT: Photo + Info -->
-  <div style="flex: 1; max-width: 250px; text-align: center;">
+  <div style="flex: 1; max-width: 400px; text-align: center;">
     <img src="/assets/images/gitavatar.jpeg" alt="Lorenzo Rossi" style="width: 100%; border-radius: 50%; margin-bottom: 10px;">
     <h3>Ph.D. Candidate</h3>
     <p style="font-size: 0.9em; line-height: 1.4;">
