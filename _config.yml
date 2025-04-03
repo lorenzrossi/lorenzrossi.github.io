@@ -44,6 +44,14 @@ author:
     - label: LinkedIn
       url: https://www.linkedin.com/in/lorenzo-rossi-227979168/
 
+nav:
+  - name: "Publications"
+    link: /publications/
+  - name: "Working papers"
+    link: /publications/
+  - name: "Teaching"
+    link: /teaching/
+
 # Exclude from processing.
 # The following items will not be processed, by default.
 # Any item listed under the `exclude:` key here will be automatically added to
