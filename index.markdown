@@ -49,8 +49,8 @@ title: Lorenzo Rossi
     <div style="flex: 2;">
       <h2 style="color: #111;">About Me</h2>
       <p style="font-size: 1em; line-height: 1.7; color: #444;">
-        I am a Ph.D. Candidate at the Department of Economics, Management and Quantitative Methods at the 
-        <a href="https://demm.unimi.it/it" style="color: #007acc;">University of Milan</a>.
+        I am a Ph.D. Candidate at the Department of Economics, Management and Quantitative Methods of 
+        <a href="https://demm.unimi.it/it" style="color: #007acc;">University of Milan</a> and at the Department of Economics and Management of <a href="https://economiaemanagement.dip.unipv.it/en" style="color: #007acc;">University of Pavia</a>.
       </p>
 
       <p style="font-weight: bold; margin-top: 30px;">My research interests include:</p>
