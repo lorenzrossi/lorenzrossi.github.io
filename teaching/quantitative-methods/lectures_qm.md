@@ -5,9 +5,8 @@ permalink: /teaching/quantitative-methods/lectures_qm/
 ---
 
 <h2 style="margin-left: 40px;">Quantitative Methods - Lectures</h2>
-<p style="margin-left: 40px;">Academic Year 2024/2025</p>
 
-<h3 style="margin-left: 40px;">Practice Materials</h3>
+<h3 style="margin-left: 40px; font-weight: normal;">Practice Materials - Academic Year 2024/2025</h3>
 <ul style="margin-left: 40px;">
   <li><a href="/teaching/quantitative-methods/Practice1.Rmd" download>📄 Practice 1</a></li>
   <li><a href="/teaching/quantitative-methods/Practice2.Rmd" download>📄 Practice 2</a></li>
