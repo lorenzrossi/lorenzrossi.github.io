@@ -21,6 +21,10 @@ title: Lorenzo Rossi
         Management and Quantitative Methods<br>
         University of Milan
       </p>
+      <p style="font-size: 0.8em; line-height: 1.4; color: #666; margin-top: 8px;">
+        MSc in Data Science and Economics<br>
+        University of Milan
+      </p>
 
       <!-- Social icons -->
       <div style="margin-top: 10px;">
