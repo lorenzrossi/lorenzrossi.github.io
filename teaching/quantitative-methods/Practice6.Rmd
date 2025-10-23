@@ -1,0 +1,569 @@
+---
+title: "Practice 6 - Principal Component Analysis"
+author: "Lorenzo Rossi"
+date: "`r Sys.Date()`"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+
+Today we'll learn how to apply Principal Component Analysis (PCA) using real-world data.
+
+We use principal component analysis to summarize several variables describing different measures of national development, economics, and demographics into a smaller number of components.
+
+The data used include 35 variables describing various aspects of 195 countries worldwide.
+The data are in the file `worlddata2023.csv` that we import from RStudio.
+We use the library `stargazer` for the display of tables and `dplyr` for data manipulation.
+
+```{r setup, message=FALSE, warning=FALSE}
+library(stargazer)
+library(dplyr)
+library(stringr)
+
+# Read the data
+worlddata <- read.csv("world-data-2023.csv", stringsAsFactors = FALSE)
+colnames(worlddata)
+str(worlddata)
+```
+
+## Data Preprocessing
+
+The dataset contains many variables with string formatting (percentages, currency symbols, commas) that need to be converted to numeric values for PCA analysis.
+
+```{r preprocessing}
+# Define function to clean numeric strings
+clean_numeric <- function(x) {
+  as.numeric(gsub("[\\$,\\%\\,]", "", gsub(",", "", x)))
+}
+
+# Clean and preprocess dataset
+worlddata_clean <- worlddata %>%
+  mutate(
+    GDP_clean = clean_numeric(GDP),
+    Population_clean = clean_numeric(Population),
+    Density_clean = clean_numeric(`Density..P.Km2.`),
+    Agricultural_Land = clean_numeric(`Agricultural.Land....`),
+    Land_Area = clean_numeric(`Land.Area.Km2.`),
+    Armed_Forces = clean_numeric(`Armed.Forces.size`),
+    CO2_Emissions = clean_numeric(`Co2.Emissions`),
+    CPI_Change = clean_numeric(`CPI.Change....`),
+    Forested_Area = clean_numeric(`Forested.Area....`),
+    Gasoline_Price = clean_numeric(`Gasoline.Price`),
+    Primary_Education = clean_numeric(`Gross.primary.education.enrollment....`),
+    Tertiary_Education = clean_numeric(`Gross.tertiary.education.enrollment....`),
+    Health_Expenditure = clean_numeric(`Out.of.pocket.health.expenditure`),
+    Labor_Force = clean_numeric(`Population..Labor.force.participation....`),
+    Tax_Revenue = clean_numeric(`Tax.revenue....`),
+    Total_Tax_Rate = clean_numeric(`Total.tax.rate`),
+    Unemployment = clean_numeric(`Unemployment.rate`),
+    Urban_Population = clean_numeric(`Urban_population`),
+    Birth.Rate = clean_numeric(Birth.Rate),
+    Life.expectancy = clean_numeric(Life.expectancy),
+    Infant.mortality = clean_numeric(Infant.mortality),
+    Physicians.per.thousand = clean_numeric(Physicians.per.thousand),
+    Primary_Education = clean_numeric(Primary_Education),
+    Tertiary_Education = clean_numeric(Tertiary_Education),
+    CPI = clean_numeric(CPI),
+  ) %>%
+  select(Country, 
+         GDP_clean, Population_clean, Density_clean,
+         Birth.Rate, Life.expectancy, Infant.mortality, 
+         Maternal.mortality.ratio, Physicians.per.thousand,
+         Primary_Education, Tertiary_Education, CPI,
+         Agricultural_Land, Forested_Area, CO2_Emissions,
+         Latitude, Longitude) %>%
+  filter(rowSums(is.na(.)) < 8)
+  
+
+# Display summary
+summary(worlddata_clean)
+dim(worlddata_clean)
+```
+
+Now let's create a regional grouping variable to parallel the gender grouping in the original analysis:
+
+```{r regions}
+# Create regional groups based on country names and geographic knowledge
+# This is a simplified classification for demonstration purposes
+create_region <- function(country, lat, long) {
+  if (is.na(lat) || is.na(long)) return("Other")  # Handle missing coords
+  
+  if (country %in% c("Australia", "New Zealand", "Fiji", "Papua New Guinea")) return("Oceania")
+  if (long < -30 && lat < 70 && lat > -60) return("Americas")
+  if (long >= -30 && long <= 60 && lat > 35) return("Europe")
+  if (long >= -20 && long <= 60 && lat <= 35 && lat > -35) return("Africa")
+  if (long > 60 && lat > -10) return("Asia")
+  if (long >= 30 && long <= 60 && lat >= 15 && lat <= 40) return("Middle East")
+  
+  return("Other")
+}
+
+# Apply regional classification
+worlddata_clean <- worlddata_clean %>%
+  mutate(Region = mapply(create_region, Country, Latitude, Longitude),
+         Region = as.factor(Region))
+
+# Display the regions
+table(worlddata_clean$Region)
+```
+
+Now we select our key variables for PCA analysis, focusing on development indicators:
+
+```{r select_variables}
+# Select variables for PCA (excluding country name, coordinates, and region)
+# Get complete cases for selected variables
+complete_rows <- complete.cases(worlddata_clean %>%
+  select(GDP_clean, Population_clean, Birth.Rate, Life.expectancy, 
+         Infant.mortality, Physicians.per.thousand, Primary_Education, 
+         Tertiary_Education, CPI))
+
+# Apply same row filter to both datasets
+pca_vars <- worlddata_clean %>%
+  select(GDP_clean, Population_clean, Birth.Rate, Life.expectancy, 
+         Infant.mortality, Physicians.per.thousand, Primary_Education, 
+         Tertiary_Education, CPI) %>%
+  mutate(across(everything(), as.numeric)) %>%  # ensure all columns are numeric
+  na.omit()
+
+countries_info <- worlddata_clean[complete_rows, ] %>%
+  select(Country, Region)
+
+# Display PCA data summary
+print(paste("Final sample size:", nrow(pca_vars)))
+summary(pca_vars)
+```
+
+We attach the dataset in order to call all variables directly by their names:
+
+```{r attach}
+attach(pca_vars)
+ # we attach the dataset in order to call all variables directly by their names
+```
+
+## Computing Means and Variances
+
+Now we compute means and variances of all variables using the `apply` function. The family of `apply` commands is very useful because it allows to compute an operation/function by column or by row.
+
+```{r descriptives}
+# Compute means and variances
+apply(pca_vars, 2, mean)
+apply(pca_vars, 2, var)
+```
+
+## PCA using Covariance Matrix
+
+We first run a PCA using the sample covariance matrix. This is not a good idea because the variables have different unit measures and even those that have the same unit have different orders of magnitude, as emerges from the covariance matrix below:
+
+```{r cov_matrix}
+# Display covariance matrix
+as.matrix(cov(pca_vars), 2)
+```
+
+The variables `GDP_clean` and `Population_clean` have significantly larger variances, and thus we expect the first principal component based on covariance matrix to be dominated by these two variables.
+
+We now proceed with the computation of PCA using `prcomp`.
+
+```{r pca_covariance}
+# PCA on covariance matrix
+pr.out_cov <- prcomp(pca_vars, scale = FALSE)
+summary(pr.out_cov)
+names(pr.out_cov)
+```
+When we run PCA on the **covariance matrix** without standardizing the variables (i.e., using `scale = FALSE`), we see that:
+
+- The **first principal component (PC1)** has an extremely large standard deviation (`2.289e+12`) compared to all other components.
+
+- It captures **essentially 100% of the total variance** in the dataset, as indicated by the **Proportion of Variance = 1.000**.
+
+- All other components (PC2 to PC9) contribute **negligibly to the variance** — essentially zero.
+
+This result is expected and illustrates a common problem when using the **covariance matrix without standardization**:
+
+- Variables like **GDP or Population** (even after log transformation) still have much larger variances compared to others.
+
+- These high-variance variables **dominate the PCA**, causing the first principal component to be completely skewed toward them, and making the rest of the components meaningless.
+
+
+The option `scale`, if omitted, is set to `FALSE` by default, that means we are not standardizing the variables, therefore we are running a PCA on covariance matrix.
+
+By printing the output, we see the loadings matrix (the matrix of the eigenvectors of the sample covariance matrix), called `rotation`:
+
+```{r loadings_cov}
+print(pr.out_cov$rotation, digits = 3)
+```
+
+As expected:
+
+- **PC1 is almost entirely made up of `GDP_clean`**, with a loading of **1.00**. 
+
+- All other variables have loadings close to zero — their influence on PC1 is negligible.
+
+- **PC2 is dominated by `Population_clean`**, with a loading of **-1.00**.
+
+This confirms that the PCA is **completely dominated by the high-variance variables**, `GDP_clean` and `Population_clean`, because:
+
+- PCA based on the **covariance matrix** is sensitive to the scale (variance) of each variable.
+
+- Variables with the largest numerical ranges will **dominate the principal components**, rendering the rest almost invisible in the first few PCs.
+
+
+## PCA using Correlation Matrix (Standardized Variables)
+
+Now, we repeat the PCA with standardized variables, using the correlation matrix. We add the option `scale=TRUE` in the function `prcomp` to make sure that the PCA is done on the correlation matrix.
+
+```{r correlation_matrix}
+# Display correlation matrix
+round(cov(pca_vars), 2)
+```
+
+```{r pca_correlation}
+# PCA on correlation matrix (standardized variables)
+pr.out <- prcomp(pca_vars, scale. = TRUE)
+summary(pr.out)
+names(pr.out)
+```
+
+Interpretation:
+
+- PC1 now explains 46.5% of the total variance, which is a much more balanced outcome compared to the PCA on the unscaled (covariance) data.
+
+-	We now need 2 to 4 components to explain the majority of the variance, which is typical in real multivariate data.
+
+- The use of standardized variables ensures that no single variable (e.g., GDP or Population) dominates the analysis.
+
+With the command `round` we save the rotation matrix by rounding to two digits only and then remove components that are below a threshold (lower than 0.3). With the `stargazer` function we then print the loadings into a table:
+
+```{r loadings_clean}
+print(pr.out$rotation, digits = 3)
+
+# Clean display of loadings (truncate small values)
+pr <- round(pr.out$rotation, digits = 2)
+pr[abs(pr) < 0.30] <- ''
+stargazer(pr[,1:3], type = "text", title = "Principal Component Loadings")
+```
+
+This way of representing the loadings is useful because it highlights only those variables that are more relevant for each component, and thus makes it easier to interpret the components.
+
+## Interpretation of Components
+
+**First Principal Component (PC1)**: This appears to represent **overall development level**. It is driven by health and development indicators (Life.expectancy, Physicians.per.thousand, Tertiary_Education) and negatively by Infant.mortality and Birth.Rate.
+
+**Second Principal Component (PC2)**: This seems to capture **economic scale**, with high positive loadings on GDP and population, representing the absolute size of the economy rather than development quality.
+
+**Third Principal Component (PC3)**: This appears to be influenced by Primary_Education (positive) and CPI (negative), possibly reflecting contrasts in foundational education and price stability.
+
+## Variance Explained Visualization
+
+We can display all the values produced by `summary` for a PCA:
+
+```{r variance_summary}
+names(summary(pr.out))
+summary(pr.out)$importance
+```
+Interpretation:
+
+-	The Proportion of Variance row shows how much variance each principal component explains.
+
+- PC1 explains about 46.5% of the total variance.
+
+- PC2 adds 17.9%, and PC3 adds another 12%.
+
+- The Cumulative Proportion row indicates how much total variance is explained as components are added:
+
+- The first three components explain ~76% of the total variance.
+
+- The first six components explain over 95%, which is a commonly used threshold in PCA for dimensionality reduction.
+
+This table is critical for deciding:
+
+- How many components to retain in your analysis.
+
+- Whether additional components meaningfully contribute to explaining variation in the data.
+
+We can plot the proportion of variance explained by each component:
+
+```{r variance_plots}
+# Extract proportion of variance explained
+pve <- summary(pr.out)$importance[2,]
+
+# Create scree plot and cumulative variance plot
+par(mfrow = c(2,1))
+plot(pve, type = "o", ylab = "PVE", xlab = "Principal Component", col = "blue")
+plot(cumsum(pve), type = "o", ylab = "Cumulative PVE", xlab = "Principal Component", col = "brown3")
+```
+
+The variances explained are decreasing and, in case of standardization of the variables, the graph coincides with the eigenvalues of the correlation matrix. Thus, the first plot coincides with a scree plot.
+
+## Principal Component Scores by Region
+
+We can then plot the *component scores*, namely the values of the principal components computed for all units. The *scores* are saved in `pr.out$x`.
+
+```{r scores_plot}
+# Plot PC scores colored by region
+par(mfrow = c(1,1))
+regions <- countries_info$Region
+plot(pr.out$x[,1:2], col = as.numeric(regions), pch = 19, 
+     xlab = expression(Y["1"]), ylab = expression(Y["2"]))
+legend("topright", legend = levels(regions), col = 1:length(levels(regions)), 
+       pch = 19, cex = 0.8)
+```
+
+The plot has points colored by region. We can see clear patterns in how different regions cluster in the PC space.
+
+Interpretation:
+
+- Each point on the plot represents a country, positioned according to its PC1 and PC2 scores.
+
+- Colors differentiate regions (e.g., Africa, Asia, Europe).
+
+- The horizontal axis (Y₁) explains the largest amount of variance (typically associated with development level).
+
+- The vertical axis (Y₂) explains the second most variance (often distinguishing other structural or regional contrasts).
+
+From the plot:
+
+- African countries (black) tend to cluster tightly in the lower left quadrant, indicating similar and relatively low PC1 scores (often interpreted as lower development scores).
+
+- European countries (blue) are more spread on the right side, suggesting higher development indicators and greater diversity.
+
+- Asian countries (green) are widely scattered — some have very high Y₂ scores, indicating possible outliers or countries with very different structures (e.g., large populations or economies).
+
+## Regional Analysis
+
+Now we separate the groups of countries by region and repeat the PCA separately for different regions:
+
+```{r regional_pca}
+# Separate analysis for Europe and Africa (largest groups)
+europe_indices <- which(regions == "Europe")
+africa_indices <- which(regions == "Africa")
+
+if (length(europe_indices) > 5) {
+  pca_vars_europe <- pca_vars[europe_indices, ]
+  pr.out_europe <- prcomp(pca_vars_europe, scale. = TRUE)
+  cat("\nEurope PCA Summary:\n")
+  print(summary(pr.out_europe))
+}
+
+if (length(africa_indices) > 5) {
+  pca_vars_africa <- pca_vars[africa_indices, ]
+  pr.out_africa <- prcomp(pca_vars_africa, scale. = TRUE)
+  cat("\nAfrica PCA Summary:\n")
+  print(summary(pr.out_africa))
+}
+```
+Summary of Regional PCA
+
+Europe:
+
+- PC1 explains ~34.2% of the variance.
+
+- The first three components together explain ~68%, and up to ~86% is explained with five components.
+
+- This suggests that development in Europe is more multidimensional — no single component dominates.
+
+Africa:
+
+- PC1 explains ~49.7% of the variance — much higher than in Europe.
+
+- The first two components explain ~67%, and the first three explain ~78%.
+
+- This indicates that the variation in African development data is more concentrated in fewer components, possibly driven by more consistent patterns of inequality or development stages.
+
+
+We can then save the loadings from both PCAs, by truncating values below the threshold 0.3:
+
+```{r regional_loadings}
+if (exists("pr.out_europe") && exists("pr.out_africa")) {
+  pr_europe <- round(pr.out_europe$rotation, 2)
+  pr_europe[abs(pr_europe) < 0.3] <- ''
+  pr_africa <- round(pr.out_africa$rotation, 2)
+  pr_africa[abs(pr_africa) < 0.3] <- ''
+  
+  stargazer(pr_europe[, 1:3], type = "text", title = "Loadings of PCA for Europe")
+  stargazer(pr_africa[, 1:3], type = "text", title = "Loadings of PCA for Africa")
+}
+```
+
+Loadings of PCA for Europe:
+
+-	PC1 reflects a mix of development indicators:
+
+- Positive: Life.expectancy, Primary_Education, Tertiary_Education
+
+- Negative: Birth.Rate, Infant.mortality, CPI
+
+- PC2 captures economic size: strong positive loadings on GDP_clean and Population_clean
+
+- PC3 distinguishes education: high Birth.Rate vs. negative Tertiary_Education
+
+Loadings of PCA for Africa:
+
+- PC1 is dominated by: Birth.Rate, Infant.mortality (Positive), Life.expectancy, Tertiary_Education, Physicians.per.thousand (Negative)
+	
+- PC2 again highlights economic scale (GDP_clean, Population_clean)
+
+- PC3 strongly reflects educational access: dominated by negative loading on Primary_Education
+
+
+## Identifying Variables for Removal
+
+Let's examine which variables might be poorly correlated with others, similar to how skull diameter was identified in the original analysis:
+
+```{r correlation_analysis}
+# Examine correlations to identify potential variables to remove
+cor_matrix <- cor(pca_vars)
+round(cor_matrix, 2)
+
+# Look for variables with consistently low correlations
+mean_abs_cor <- apply(abs(cor_matrix), 1, function(x) mean(x[x != 1]))
+print("Mean absolute correlations (excluding self-correlation):")
+sort(mean_abs_cor)
+```
+This gives us an overview of how strongly each variable is related to the others. For example:
+
+- Life.expectancy and Infant.mortality have a strong negative correlation (-0.93)
+
+- Primary_Education and CPI, however, show very weak correlations with most other variables
+
+
+Based on this analysis, we might consider removing variables that don't correlate well with the others.
+
+```{r refined_analysis}
+# Remove the low correlated variables
+pca_vars_refined <- pca_vars %>%
+  select(-Primary_Education, -CPI)
+
+print("Refined dataset for PCA:")
+summary(pca_vars_refined)
+```
+
+## Refined PCA Analysis
+
+```{r refined_pca}
+# Run PCA on refined dataset
+pr.out_refined <- prcomp(pca_vars_refined, scale. = TRUE)
+summary(pr.out_refined)
+
+# Clean loadings display
+pr_refined <- round(pr.out_refined$rotation, digits = 2)
+pr_refined[abs(pr_refined) < 0.30] <- ''
+stargazer(pr_refined[,1:2], type = "text", title = "Refined PCA Loadings")
+```
+
+- The first principal component (PC1) explains nearly 60% of the total variance, indicating a strong unidimensional structure.
+
+- The first two components together explain ~82.6%, which is excellent for summarizing the dataset in two dimensions.
+
+- This confirms that the remaining variables are highly informative and well-aligned.
+
+Interpretation of Components:
+
+- PC1: A strong development quality dimension, with high positive loadings on Life.expectancy, Tertiary_Education, and Physicians.per.thousand, and negative loadings on Birth.Rate and Infant.mortality. This suggests PC1 captures health and education-driven development.
+
+- PC2: Still captures economic scale, dominated by GDP_clean and Population_clean.
+
+## Final Visualization
+
+```{r final_plots}
+# Variance explained for refined model
+pve_refined <- summary(pr.out_refined)$importance[2,]
+
+par(mfrow = c(1,2))
+plot(pve_refined, type = "o", ylab = "PVE", xlab = "Principal Component", 
+     col = "blue")
+plot(cumsum(pve_refined), type = "o", ylab = "Cumulative PVE", 
+     xlab = "Principal Component", col = "brown3")
+```
+
+The figure shows a clear drop in the slope when we increase from one to two components, supporting the choice of two components.
+
+## Component Scores for Refined Analysis
+
+```{r refined_scores}
+# Plot refined PC scores
+par(mfrow = c(1,1))
+plot(pr.out_refined$x[,1:2], col = as.numeric(regions), pch = 19,
+     xlab = expression(Y["1"]), ylab = expression(Y["2"]))
+legend("topleft", legend = levels(regions), col = 1:length(levels(regions)), 
+       pch = 19, cex = 0.8)
+```
+
+## Biplot Analysis
+
+Finally, we can display the biplot, that gives us a view of both the countries and the variables:
+
+```{r biplot}
+# Create biplots with different scaling
+par(mfrow = c(1,2))
+
+# Biplot focusing on country positions (scale = 1, equivalent to alpha = 0)
+biplot(pr.out_refined, scale = 1, xlabs = rep("*", nrow(pr.out_refined$x)), 
+       cex = 0.8, main = "Biplot: Country Distances")
+
+# Biplot focusing on variable relationships (scale = 0, equivalent to alpha = 1)  
+biplot(pr.out_refined, scale = 0, xlabs = rep("*", nrow(pr.out_refined$x)), 
+       cex = 0.8, main = "Biplot: Variable Loadings")
+```
+
+Left Panel: Biplot of Country Distances 
+
+- In this view, the points represent countries based on their PCA scores.
+
+- Distances between points reflect Mahalanobis distances, approximating how similar countries are in their development profiles.
+
+- Countries that are closer together in the plot have more similar development characteristics across the retained components.
+
+- The variable vectors are still present, but their interpretation is distorted due to the focus on observation distances.
+
+⸻
+
+Right Panel: Biplot of Variable Loadings (Scale = 0)
+
+- Here, the scaling emphasizes variable relationships.
+
+- Arrows indicate the direction and strength of each variable’s contribution:
+
+- Variables with longer arrows are more influential.
+
+- The angle between arrows reflects their correlation:
+
+- Small angles = positive correlation
+
+- Right angles = little/no correlation
+
+- Opposing directions = negative correlation
+
+In this plot:
+
+- GDP_clean and Population_clean point in a similar direction → strongly correlated scale indicators.
+
+- Life.expectancy, Tertiary_Education, and Physicians.per.thousand also cluster together, representing the development quality axis.
+
+- Birth.Rate and Infant.mortality point in opposite directions, showing inverse relationships with development.
+	
+We can also create a biplot with regional labels:
+
+```{r biplot_regions}
+par(mfrow = c(1,1))
+# Create abbreviated region labels for cleaner display
+region_abbrev <- substr(as.character(regions), 1, 1)
+biplot(pr.out_refined, xlabs = region_abbrev, cex = 0.8, 
+       main = "PCA: Countries by Region")
+```
+
+## Key Conclusions
+
+1. **Standardization is crucial**: Raw variables with different scales make PCA meaningless without standardization.
+
+2. **Component interpretability**: The first component clearly represents development quality, while the second captures different aspects of development focus.
+
+3. **Regional patterns**: Different regions show distinct patterns in the PC space, reflecting their development profiles.
+
+4. **Variable selection matters**: Removing scale variables (GDP, Population) improved the interpretability of development-focused components.
+
+Finally, before closing, we detach the dataset so that the variables that were copied by the `attach` command are removed:
+
+```{r detach}
+detach(pca_vars)
+```

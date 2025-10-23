@@ -1,0 +1,751 @@
+---
+title: "Practice 2 - Decriptive Statistics and Visual Representation"
+author: "Lorenzo Rossi"
+date: "2025-04-17"
+output:
+  html_document: default
+  pdf_document: 
+      latex_engine: xelatex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Descriptive Statistics
+
+We will begin using the `Boston` Housing dataset from the `MASS` package. Load it with:
+
+```{r}
+library(MASS)
+data(Boston)
+head(Boston)
+```
+
+---
+
+## Summary Statistics
+
+Summary statistics help us describe and understand the distribution of variables in a dataset. For numeric variables, these include **measures of central tendency** and **measures of dispersion**.
+
+---
+
+
+### **Mean** ($\bar{x}$)
+
+The mean is the arithmetic average:
+
+$$
+\bar{x} = \frac{1}{n} \sum_{i=1}^{n} x_i
+$$
+
+```{r}
+mean(Boston$medv)
+```
+
+### **Median**
+
+The median is the middle value when the data is ordered:
+
+```{r}
+median(Boston$medv)
+```
+
+---
+
+
+### **Variance** ($s^2$)
+
+Measures the average squared deviation from the mean:
+
+$$
+s^2 = \frac{1}{n - 1} \sum_{i=1}^{n} (x_i - \bar{x})^2
+$$
+
+```{r}
+var(Boston$medv)
+```
+
+### **Standard Deviation** ($s$)
+
+Square root of variance:
+
+$$
+s = \sqrt{s^2}
+$$
+
+```{r}
+sd(Boston$medv)
+```
+
+### **Interquartile Range (IQR)**
+
+Difference between the 75th percentile ($Q_3$) and 25th percentile ($Q_1$):
+
+$$
+\text{IQR} = Q_3 - Q_1
+$$
+
+```{r}
+IQR(Boston$medv)
+```
+
+### **Range**
+
+The range is the difference between the maximum and minimum:
+
+```{r}
+range(Boston$medv)
+diff(range(Boston$medv))
+```
+
+---
+
+### Shape of Distribution
+
+To describe the shape of the distribution, we can compute:
+
+**Skewness** – Asymmetry of the distribution  
+**Kurtosis** – Tailedness of the distribution (or in other words, how "wide" is the distribution)
+
+> For this, install and load the `e1071` package:
+
+```{r}
+#install.packages("e1071")
+library(e1071)
+skewness(Boston$medv)
+kurtosis(Boston$medv)
+```
+
+> **Question:** If the skewness is positive, what does that tell us about the shape of the distribution?
+
+> **Question:** What does a high value of the kurtosis mean?
+
+---
+
+### Summary Table (All at Once)
+
+```{r}
+summary(Boston)
+sapply(Boston, mean)
+sapply(Boston, sd)
+sapply(Boston, function(x) diff(range(x)))
+sapply(Boston, IQR)
+```
+
+To round:
+
+```{r}
+round(sapply(Boston, mean), 2)
+```
+
+To check types:
+
+```{r}
+str(Boston)
+```
+
+---
+
+### Creating a Table of Summary Statistics
+
+While the `summary()` function gives a quick look at your data, it's often better to create a **clean, customized summary table**. This is especially useful in reports, presentations, or for deeper interpretation.
+
+We’ll use the `dplyr`, `tibble`, and `tidyr` packages to compute a set of descriptive statistics for each numeric variable in the dataset:
+
+- **Mean**
+- **Median**
+- **Standard Deviation**
+- **Minimum**
+- **Maximum**
+- **Interquartile Range (IQR)**
+- **Coefficient of Variation (CV)**
+
+### 🔧 Load Required Packages
+
+```{r}
+#install.packages("dplyr")
+#install.packages("tibble")
+#install.packages("tidyr")
+library(dplyr)
+library(tibble)
+library(tidyr)
+```
+
+### Build the Summary Table
+
+You can use `sapply()` with `data.frame()` to build a quick summary statistics table:
+
+```{r}
+stats_table <- data.frame(
+  Mean = sapply(Boston, mean),
+  Median = sapply(Boston, median),
+  SD = sapply(Boston, sd),
+  IQR = sapply(Boston, IQR),
+  Min = sapply(Boston, min),
+  Max = sapply(Boston, max)
+)
+round(stats_table, 2)
+```
+
+This is a fast and readable method, especially useful for small datasets or when you just want a quick overview.
+
+---
+
+### Categorical Breakdown with the `iris` Dataset
+
+The `iris` dataset is a classic dataset in statistics and machine learning. It contains **150 observations** of **3 species of iris flowers** (`setosa`, `versicolor`, `virginica`). For each flower, the following **4 numeric variables** are recorded:
+
+- `Sepal.Length`
+- `Sepal.Width`
+- `Petal.Length`
+- `Petal.Width`
+
+The fifth variable, `Species`, is a **categorical variable** indicating the species.
+
+```{r}
+data(iris)
+head(iris)
+str(iris)
+```
+
+The `Species` column in the `iris` dataset is a categorical variable with three levels:
+
+```{r}
+table(iris$Species)
+```
+
+This tells us the number of observations for each species of iris.
+
+---
+
+### Grouped Summary Statistics by Category
+
+We can compute the basic summary statistics for each species.
+
+We'll use `split()` to divide the dataset by `Species` and then apply `sapply()`.
+
+```{r}
+# Function to compute basic stats
+simple_summary <- function(df) {
+  data.frame(
+    Mean = sapply(df, mean),
+    Median = sapply(df, median),
+    SD = sapply(df, sd),
+    IQR = sapply(df, IQR),
+    Min = sapply(df, min),
+    Max = sapply(df, max)
+  )
+}
+
+# Apply to each species
+iris_by_species <- split(iris[, 1:4], iris$Species)
+iris_tables <- lapply(iris_by_species, simple_summary)
+
+iris_tables
+```
+
+This method produces a separate table for each species: **setosa**, **versicolor**, and **virginica**.
+
+> **Task**: Based on the tables, which species shows the highest variability in petal measurements?
+
+---
+
+## Relationships Between Variables: t-stat, p-value, Covariance & Correlation
+
+Before we move on to visualizations, it’s essential to understand how variables relate to one another **numerically**. These tools are especially useful in **hypothesis testing**, **regression analysis**, and **exploratory data analysis**.
+
+---
+
+### t-Statistic & p-Value
+
+The **t-statistic** measures how many standard errors our sample mean is from a hypothesized value.
+
+### Formula for one-sample t-test:
+$$
+t = \frac{\bar{x} - \mu_0}{s / \sqrt{n}}
+$$
+
+- $\bar{x}$: sample mean  
+- $\mu_0$: hypothesized population mean  
+- $s$: sample standard deviation  
+- $n$: sample size
+
+ The **p-value** is the probability of obtaining a test statistic as extreme as the one observed, under the null hypothesis. A small p-value (typically < 0.05) indicates **statistical significance**.
+
+```{r}
+t.test(Boston$medv, mu = 22)
+```
+
+---
+
+### Covariance
+
+Covariance indicates whether two variables **move together**. A positive covariance means they increase together; negative means they move oppositely.
+
+
+$$
+\text{Cov}(X, Y) = \frac{1}{n - 1} \sum_{i=1}^{n}(x_i - \bar{x})(y_i - \bar{y})
+$$
+
+```{r}
+cov(Boston$rm, Boston$medv)
+```
+
+---
+
+###  Correlation
+
+**Correlation** is a **standardized** version of covariance that ranges from **-1 to 1**.
+
+- **+1**: perfect positive relationship  
+- **-1**: perfect negative relationship  
+- **0**: no linear relationship
+
+**Pearson Correlation**:
+$$
+r = \frac{\sum (x_i - \bar{x})(y_i - \bar{y})}{\sqrt{\sum (x_i - \bar{x})^2 \sum (y_i - \bar{y})^2}}
+$$
+
+```{r}
+cor(Boston$rm, Boston$medv)  # Pearson correlation
+```
+
+---
+
+### Correlation Matrix
+
+To assess multiple relationships at once, use a **correlation matrix**.
+
+```{r}
+round(cor(Boston), 2)
+round(cor(iris[1:4]), 2)
+```
+
+---
+
+### Keep in mind: Correlation ≠ Causation!
+
+Correlation only implies a relationship — not **cause and effect**.
+
+![](cage.png)
+
+---
+
+
+> **Question:** What does a correlation of 0.90 between two variables tell us?  
+
+> **Challenge:** Find the variable in the Boston dataset that has the strongest correlation with `medv`.
+
+
+# Visual Representations
+
+Visualizations are essential tools in data analysis. They help us detect patterns, identify outliers, and understand relationships between variables.
+
+Plots help us understand also the **shape** of a variable's distribution. They let us check:
+
+- **Symmetry** or **Skewness** (is the tail longer on one side?)
+- **Peakedness** or **Kurtosis**
+- Potential **outliers**
+
+We’ll now explore common types of plots using both the **Boston** and **iris** datasets.
+
+### 1. Histograms
+
+Histograms are used to visualize the **distribution of a single numeric variable**.
+
+```{r}
+hist(Boston$medv, main="Histogram of Median Home Value", xlab="Median Value ($1000s)")
+
+hist(iris$Petal.Length, main="Histogram of Petal Length", xlab="Petal Length")
+```
+
+**Histogram with Density Curve**
+
+Use `hist()` with `density()` to see the distribution with a smooth overlay.
+
+```{r}
+hist(Boston$medv, freq=FALSE, main="Histogram + Density of Median Home Value",
+     xlab="Median Value ($1000s)", col="lightgray", border="white")
+lines(density(Boston$medv), col="blue", lwd=2)
+
+hist(iris$Petal.Length, freq=FALSE, main="Histogram + Density of Petal Length",
+     xlab="Petal Length", col="lightgreen", border="white")
+lines(density(iris$Petal.Length), col="darkgreen", lwd=2)
+```
+---
+
+### 2. Boxplots
+
+Boxplots show the **median, quartiles, and potential outliers** in a numeric variable. They’re especially useful for comparing distributions across groups.
+
+```{r}
+boxplot(Boston$medv, main="Boxplot of Median Home Value")
+
+boxplot(Petal.Length ~ Species, data=iris,
+        main="Petal Length by Species",
+        ylab="Petal Length")
+```
+
+---
+
+### 3. Scatter Plots
+
+Scatter plots reveal **relationships between two numeric variables**.
+
+```{r}
+plot(Boston$rm, Boston$medv,
+     main="Rooms vs Median Value",
+     xlab="Average Number of Rooms",
+     ylab="Median Value ($1000s)",
+     pch=19, col="blue")
+```
+
+You can also do that by group
+
+```{r}
+# Define color mapping for species
+colors <- c("setosa" = "red", "versicolor" = "green", "virginica" = "blue")
+
+# Plot with colored points
+plot(iris$Petal.Length, iris$Petal.Width,
+     col = colors[iris$Species],
+     main = "Petal Length vs Width by Species",
+     xlab = "Petal Length", ylab = "Petal Width", pch = 19)
+
+# Add a legend
+legend("topleft", legend = names(colors), col = colors, pch = 19, title = "Species")
+```
+
+---
+
+### 4. Pair Plots (Matrix of Scatterplots)
+
+Use `pairs()` to examine relationships between multiple numeric variables.
+
+```{r}
+pairs(Boston[, c("rm", "medv", "lstat", "crim")], main="Boston Variables")
+
+pairs(iris[1:4], col = colors[iris$Species], pch=19, main="Iris Feature Relationships")
+```
+
+```{r}
+# Define color mapping for species
+colors <- c("setosa" = "red", "versicolor" = "green", "virginica" = "blue")
+
+# Plot with colored points
+pairs(iris[1:4], col = colors[iris$Species], pch=19, main="Iris Feature Relationships")
+```
+
+---
+
+### 5. Bar Plots (Categorical Variables)
+
+Bar plots visualize **frequencies or proportions** of categorical variables.
+
+```{r}
+barplot(table(iris$Species), main="Species Frequency", col="lightblue")
+
+```
+
+---
+
+> **Question:** What does the histogram of `medv` suggest about home values in Boston? 
+
+> **Question:** How does petal length vary across iris species?  
+
+
+### 6. QQ-Plots (Quantile-Quantile)
+
+QQ-plots help visually assess whether a variable follows a normal distribution.
+
+```{r}
+qqnorm(Boston$medv, main="QQ-Plot: Boston medv")
+qqline(Boston$medv, col="red")
+
+qqnorm(iris$Petal.Length, main="QQ-Plot: Petal Length")
+qqline(iris$Petal.Length, col="blue")
+```
+
+---
+
+> **Challenge:** Compare the kurtosis of `Petal.Width` across species.
+
+
+
+---
+
+# Visualizing with `ggplot2`
+
+`ggplot2` is a powerful and flexible package for creating professional graphics in R. It is based on the **Grammar of Graphics**, which builds plots by combining layers.
+
+Let’s explore a variety of visualizations using `ggplot2`.
+
+---
+
+### Load `ggplot2`
+
+```{r}
+#install.packages("ggplot2")
+library(ggplot2)
+```
+
+---
+
+### 1. Distribution of Continuous Variables
+
+**Purpose:** Show the spread and shape of numeric data.
+
+```{r}
+ggplot(Boston, aes(x = medv)) +
+  geom_histogram(binwidth = 2, fill="skyblue", color="black") +
+  labs(title="Histogram of Median Home Value")
+```
+
+- `geom_histogram()` splits the data into bins and counts frequencies.
+- `binwidth` adjusts how wide each bin is — smaller values show more detail.
+- Used to detect skewness, modality (uni vs multimodal), and outliers.
+
+```{r}
+ggplot(iris, aes(x = Petal.Length)) +
+  geom_density(fill="lightgreen") +
+  labs(title="Density of Petal Length")
+```
+
+- `geom_density()` estimates a continuous curve that approximates the distribution.
+- Smoother than a histogram; good for identifying peaks and comparing distributions.
+
+---
+
+### 2. Distribution of Categorical Variables
+
+**Purpose:** Show the frequency of different categories.
+
+```{r}
+ggplot(iris, aes(x = Species)) +
+  geom_bar(fill="lightcoral") +
+  labs(title="Species Count")
+```
+
+- `geom_bar()` counts occurrences of each factor level.
+- Ideal for categorical variables (e.g., types, groups, yes/no).
+- Bar height = number of cases.
+
+---
+
+### 3. Boxplots
+
+**Purpose:** Summarize the distribution using 5-number summary and show outliers.
+
+```{r}
+ggplot(iris, aes(x = Species, y = Petal.Length)) +
+  geom_boxplot(fill="lightblue") +
+  labs(title="Boxplot of Petal Length by Species")
+```
+
+- Shows **median**, **quartiles**, and **outliers** (dots).
+- Excellent for comparing across groups.
+
+---
+
+### 4. Violin Plots
+
+**Purpose:** Combines boxplot with a rotated density plot.
+
+```{r}
+ggplot(iris, aes(x = Species, y = Petal.Length)) +
+  geom_violin(fill="purple") +
+  labs(title="Violin Plot of Petal Length by Species")
+```
+
+- Thicker parts = more frequent values.
+- Helpful when you want more shape detail than boxplot provides.
+
+
+### 5. Scatter Plot with Facets
+
+**Purpose:** Show relationship between two numeric variables, separated by group.
+
+```{r}
+ggplot(iris, aes(x = Sepal.Length, y = Sepal.Width)) +
+  geom_point(aes(color = Species)) +
+  facet_wrap(~ Species) +
+  labs(title="Sepal Dimensions by Species")
+```
+
+- `facet_wrap(~ Species)` creates a separate plot for each species.
+- `geom_point()` shows relationship (e.g., does Sepal.Length grow with Sepal.Width?).
+
+---
+
+### 6. Heatmap (Correlation)
+
+**Purpose:** Visualize correlation values between numeric variables.
+
+```{r}
+cor_data <- round(cor(Boston), 2)
+cor_data_melt <- reshape2::melt(cor_data)
+
+ggplot(cor_data_melt, aes(Var1, Var2, fill = value)) +
+  geom_tile() +
+  geom_text(aes(label = value), color="white") +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0) +
+  labs(title="Correlation Heatmap")
+```
+
+- `geom_tile()` creates the colored grid.
+- Color shows magnitude and sign of correlation.
+- Text layer adds numeric values for easy reading.
+
+
+---
+
+### 7. Ridgeline Plot
+
+**Purpose:** Show distribution of a numeric variable for different categories. For this you'll need the `ggridges` package too.
+
+```{r}
+library(ggridges)
+ggplot(iris, aes(x = Petal.Length, y = Species, fill = Species)) +
+  geom_density_ridges(alpha = 0.7) +
+  labs(title="Ridgeline Plot of Petal Length")
+```
+
+- Shows multiple density plots stacked vertically.
+- Best for comparing multiple groups' distributions at once.
+
+---
+
+### 8. Pair Plot for Numeric Variables
+
+**Purpose:** Show all pairwise scatterplots, distributions, and correlations. For this you'll need the `GGally` package too.
+
+```{r}
+library(GGally)
+ggpairs(iris, columns = 1:4, aes(color = Species))
+```
+
+- Diagonal = density/histogram per variable
+- Off-diagonal = scatterplots
+- Great for exploring relationships before modeling.
+
+---
+
+# Wrap-Up: Descriptive Statistics & Visualizations with Real Data
+
+In this final section, we’ll apply all we've learned on a real-world dataset:  
+**Student Performance Factors**  
+This dataset includes information about students’ study habits, backgrounds, and their final exam scores.
+
+---
+
+### Load the Dataset
+
+```{r}
+student <- read.csv("StudentPerformanceFactors.csv")
+str(student)
+```
+
+---
+
+# Summary Statistics
+
+### Continuous Variables
+
+```{r}
+summary(student[c("Hours_Studied", "Attendance", "Sleep_Hours", "Previous_Scores", "Physical_Activity", "Exam_Score")])
+```
+
+### Summary Table
+
+```{r}
+stats_table <- data.frame(
+  Mean = sapply(student[c("Hours_Studied", "Attendance", "Sleep_Hours", "Previous_Scores", "Physical_Activity", "Exam_Score")], mean, na.rm=TRUE),
+  Median = sapply(student[c("Hours_Studied", "Attendance", "Sleep_Hours", "Previous_Scores", "Physical_Activity", "Exam_Score")], median, na.rm=TRUE),
+  SD = sapply(student[c("Hours_Studied", "Attendance", "Sleep_Hours", "Previous_Scores", "Physical_Activity", "Exam_Score")], sd, na.rm=TRUE),
+  IQR = sapply(student[c("Hours_Studied", "Attendance", "Sleep_Hours", "Previous_Scores", "Physical_Activity", "Exam_Score")], IQR, na.rm=TRUE)
+)
+round(stats_table, 2)
+```
+
+---
+
+# Visual Representation
+
+### Histogram of Exam Scores
+
+```{r}
+hist(student$Exam_Score, col="skyblue", main="Exam Score Distribution", xlab="Score")
+```
+
+### Boxplot of Exam Score by Gender
+
+```{r}
+boxplot(Exam_Score ~ Gender, data = student, col="lightgreen", main="Exam Score by Gender")
+```
+
+---
+
+### Categorical Variable Summary
+
+```{r}
+table(student$Gender)
+table(student$School_Type)
+prop.table(table(student$Motivation_Level))
+```
+
+---
+
+### Visualizations with `ggplot2`
+
+```{r}
+library(ggplot2)
+
+# Boxplot
+ggplot(student, aes(x = Gender, y = Exam_Score, fill = Gender)) +
+  geom_boxplot() +
+  labs(title = "Exam Score by Gender")
+
+# Violin Plot
+ggplot(student, aes(x = Motivation_Level, y = Exam_Score, fill = Motivation_Level)) +
+  geom_violin() +
+  labs(title = "Exam Score by Motivation Level")
+
+# Scatter Plot with Facets
+ggplot(student, aes(x = Hours_Studied, y = Exam_Score)) +
+  geom_point(alpha = 0.6) +
+  facet_wrap(~ Gender) +
+  labs(title = "Hours Studied vs Exam Score by Gender")
+```
+
+### Ridgeline Plot (Exam Score by Motivation Level)
+
+```{r}
+ggplot(student, aes(x = Exam_Score, y = Access_to_Resources, fill = Access_to_Resources)) +
+  geom_density_ridges(alpha = 0.7) +
+  labs(title = "Ridgeline Plot: Exam Score by Access to Resources")
+```
+
+---
+
+### Homework
+
+> **Task 1**: Calculate the average exam score for students with `High` vs `Low` parental involvement and plot the distribution.  
+
+> **Task 2**: Plot a histogram of `Hours_Studied` and describe the shape.  
+
+> **Task 3**: Create a scatterplot of `Attendance` vs `Exam_Score`. Is there a trend?
+
+---
+
+### Questions for Discussion
+
+- **Which variables appear most associated with high Exam Scores?**
+
+- **Do students with higher motivation tend to have higher scores?**
+
+- **What can you say about gender differences in study habits and performance?**
+
+- **Which visualizations helped you learn the most about the data and why?**
+
+---

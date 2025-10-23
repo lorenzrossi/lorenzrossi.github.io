@@ -1,0 +1,79 @@
+
+---
+title: "Hackathon Simulation"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+## Objectives
+
+In this assignment, you'll use the `StudentPerformanceFactors.csv` dataset (it's in the "Useful Datasets" folder) and explore how various factors affect students' academic performance, measured by their exam scores. You’ll be expected to make choices about what to explore, interpret your results, and think critically about your findings.
+
+---
+
+### Task 1: Understand your dataset
+
+- Load the dataset and inspect its structure.
+- Identify which variables are numeric and which are categorical.
+- Are there any variables with missing values?
+- What is the overall distribution of `Exam_Score`?
+
+---
+
+### Task 2: Explore key variables
+
+- Plot the distribution of `Hours_Studied` and `Sleep_Hours`.
+- Use a boxplot to examine how `Exam_Score` varies by `Parental_Education_Level` and `Motivation_Level`.
+- What differences do you notice?
+
+- Plot a histogram of `Exam_Scores`. Is the distribution symmetric or skewed?
+- Plot a bar chart showing the count of students by `Motivation_Level`.
+- Create a scatterplot of `Attendance` vs `Exam_Score`. Is there a clear relationship?
+
+---
+
+### Task 3: Relationships between numeric variables
+
+- Compute correlations between numeric variables and `Exam_Score`.
+- Which variables appear most strongly related to exam performance?
+
+---
+
+### Task 4: Build your own model
+
+- Choose 3–5 predictors you think affect `Exam_Score`. Fit a linear regression model.
+- Interpret the coefficients: which predictors are most important?
+- Are any relationships surprising?
+
+**Additional questions:**
+
+- Compare two models: one using `log(Previous_Scores)` and one using the original variable. Which fits better? Why?
+
+- If you observe skewness in a numeric predictor, should you apply a transformation? How would you test if it's appropriate?
+
+---
+
+### Task 5.1: Model diagnostics and improvement
+
+- Plot residuals vs. fitted values. Do you see any patterns?
+- Try adding an interaction term (e.g., `Hours_Studied * Motivation_Level`, `Hours_Studied * Parental_Involvement`). Does it improve the model?
+- Which model fits better? What might explain the difference?
+
+### Task5.2: Log-Linear Transformation
+
+- Fit a new model where the outcome variable is `log(Exam_Score)`.
+- Compare this model to the one where `Exam_Score` is untransformed.
+- Does the transformation help the model? How can you tell?
+
+---
+
+### Task 6: Reflection
+
+- Which factors turned out to be most influential?
+- What are potential limitations of your model?
+- Do students with higher `Attendance` tend to perform better?
+
+
+

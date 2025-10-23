@@ -1,12 +1,13 @@
 ---
 layout: default
-title: Teaching
-permalink: /teaching/
+title: Quantitative Methods - Lectures
+permalink: /teaching/quantitative-methods/lectures_qm/
 ---
 
-<h2 style="margin-left: 40px;">Teaching</h2>
-<p style="margin-left: 40px;"><strong>Quantitative Methods, A.Y. 2024/2025</strong> - Università degli Studi di Milano - Lectures, practices and tutoring (40 hours total) - <a href="https://www.unimi.it/it/corsi/insegnamenti-dei-corsi-di-laurea/2026/quantitative-methods-0" target="_blank">Course page</a></p>
+<h2 style="margin-left: 40px;">Quantitative Methods - Lectures</h2>
+<p style="margin-left: 40px;">Academic Year 2024/2025</p>
 
+<h3 style="margin-left: 40px;">Practice Materials</h3>
 <ul style="margin-left: 40px;">
   <li><a href="/teaching/quantitative-methods/Practice1.Rmd" download>📄 Practice 1</a></li>
   <li><a href="/teaching/quantitative-methods/Practice2.Rmd" download>📄 Practice 2</a></li>
@@ -18,6 +19,3 @@ permalink: /teaching/
   <li><a href="/teaching/quantitative-methods/Practice8.Rmd" download>📄 Practice 8</a></li>
   <li><a href="/teaching/quantitative-methods/Practice9.Rmd" download>📄 Practice 9</a></li>
 </ul>
-
-<h3 style="margin-left: 40px;">Lectures</h3>
-<p style="margin-left: 40px;"><a href="/teaching/quantitative-methods/lectures_qm/">📚 Lecture Materials</a></p>

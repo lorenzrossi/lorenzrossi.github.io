@@ -1,0 +1,451 @@
+---
+title: "Practice 9 - How to get away with the project"
+author: "Lorenzo Rossi"
+date: "`r Sys.Date()`"
+output: 
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+library(tidyverse)
+library(knitr)
+library(broom)
+library(stargazer)
+```
+
+# Overview: The Three Essential Questions
+
+Every research proposal must answer:
+
+1. **WHAT** are you going to research?
+
+2. **WHY** is this topic worthy of research?
+
+3. **HOW** do you propose to perform the research?
+
+### Working Example: Fuel Efficiency Study
+
+Throughout this guide, we'll use the `mtcars` dataset to demonstrate each section of a research proposal. Our research question will be:
+
+**"What factors determine fuel efficiency in automobiles, and how can this inform environmental policy?"**
+
+```{r preview-data, include=FALSE}
+# Load and preview the data
+data(mtcars)
+head(mtcars) %>% 
+  kable(caption = "Preview of Motor Trend Car Road Tests Dataset")
+```
+
+# Core Principles for Effective Proposals
+
+## 1. Be Straightforward
+
+The goal of a proposal is to carry your message through. Therefore:
+
+
+- Write simply and clearly - no embellishments
+
+- Get to the point. Don’t waste time leading up to the subject of your research. You may spend a some sentences delineating the context, but then state directly what you are going to research;
+
+
+- Eliminate unnecessary words
+
+- Avoid ambiguities - consistency over variety in terminology. Your goal is not to create a work of art, but to be understood. Don’t be afraid to use the same word multiple times if clarity calls for it.
+
+## 2. Organize Carefully
+
+A well-structured research enhances clarity and helps readers navigate your ideas effectively.
+
+# Standard Structure for Economics Research Proposals
+
+## 1. Abstract (350 words max)
+
+Your abstract must concisely cover:
+
+- **Research question**: Clear, testable, non-obvious
+
+- **Your contribution**: What's new beyond existing literature?
+
+- **Methodology**: How you'll answer the question
+
+- **Results**: Key findings
+
+### Example Abstract:
+
+> This study investigates the determinants of fuel efficiency in automobiles using data from Motor Trend magazine (1974). While previous literature has focused primarily on engine size, we examine the combined effects of weight, transmission type, and engine characteristics on miles per gallon (MPG). Using multiple regression analysis on 32 automobile models, we find that weight is the strongest predictor of fuel efficiency (beta = -5.34, p < 0.001), with a 1,000-pound increase reducing MPG by approximately 5.3 miles. Manual transmission vehicles show 7.24 higher MPG compared to automatic transmission after controlling for other factors. These findings suggest that policies promoting lighter vehicles and manual transmissions could significantly improve fleet fuel efficiency, with potential fuel savings of 20-30% compared to current averages.
+
+## 2. Introduction ("The Why")
+
+- Begin with clearly stating the central issue or question your research project will try to answer.
+
+- Explain why you have decided to research your subject and why you believe it to be important.
+
+- Focus on practical implications and cause-effect relationships
+
+- Avoid purely descriptive approaches
+
+### Example Introduction:
+
+```{r introduction-stats, include=FALSE}
+# Show why this matters with some basic statistics
+fuel_stats <- mtcars %>%
+  summarise(
+    avg_mpg = mean(mpg),
+    sd_mpg = sd(mpg),
+    min_mpg = min(mpg),
+    max_mpg = max(mpg)
+  )
+
+kable(fuel_stats, 
+      caption = "Fuel Efficiency Statistics in Sample",
+      col.names = c("Average MPG", "Std. Dev.", "Minimum", "Maximum"))
+```
+
+> Rising fuel costs and environmental concerns make understanding automobile fuel efficiency crucial for both consumers and policymakers. With average fuel efficiency varying from `r round(fuel_stats$min_mpg, 1)` to `r round(fuel_stats$max_mpg, 1)` MPG in our sample, identifying the key determinants could inform policies that reduce fuel consumption by millions of gallons annually. This research investigates which vehicle characteristics most strongly influence fuel efficiency, providing evidence-based recommendations for automotive standards and consumer incentives.
+
+## 3. Literature Review
+
+Provide context by:
+
+- Summarizing consensus in the field
+
+- Identifying major debates and schools of thought
+
+- Highlighting methodological issues
+
+- Offering constructive criticism or new directions
+
+### Example Literature Review Structure:
+
+> Previous research has established that engine displacement negatively affects fuel efficiency (Smith, 2019; Johnson, 2020). However, most studies examine factors in isolation. Brown (2021) found weight significant but didn't control for transmission type. Our contribution examines the interactive effects of multiple factors simultaneously, addressing this methodological gap.
+
+## 4. Project Description ("The What")
+
+- Formulate your specific question/hypothesis and describe the approach you will take to answer, solve, or test it.
+
+- Suggest a theory answering or explaining the issue you have stated in the beginning.
+
+- Define key terminology
+
+### Example Project Description:
+
+**Research Question**: How do vehicle weight, engine characteristics, and transmission type jointly determine fuel efficiency?
+
+**Hypotheses**:
+
+1. H1: Vehicle weight has a negative relationship with fuel efficiency
+
+2. H2: Manual transmission vehicles are more fuel-efficient than automatic
+
+3. H3: The effect of engine size on fuel efficiency is mediated by vehicle weight
+
+**Key Terms**:
+
+- **MPG (Miles Per Gallon)**: Our measure of fuel efficiency
+
+- **Displacement**: Engine volume in cubic inches
+
+- **Transmission Type**: Binary variable (0 = automatic, 1 = manual)
+
+## 5. Research Design & Methodology ("The How")
+
+### Data Description
+
+This is a description of the data you plan to use for your analysis. It usually includes:
+
+- A citation of the primary source
+
+- Data frequency
+
+- How the data are measured
+
+- The frequency of the data
+
+The amount of detail depends on the nature of the data. Also, this is the section where you would report any modifications you make to the data.
+
+
+```{r data-description, echo=FALSE}
+# Describe the dataset
+data_summary <- data.frame(
+  Variable = names(mtcars),
+  Description = c(
+    "Miles per gallon (fuel efficiency)",
+    "Number of cylinders",
+    "Displacement (cubic inches)",
+    "Gross horsepower",
+    "Rear axle ratio",
+    "Weight (1000 lbs)",
+    "1/4 mile time",
+    "V/S engine",
+    "Transmission (0 = auto, 1 = manual)",
+    "Number of forward gears",
+    "Number of carburetors"
+  ),
+  Type = c("Continuous", "Discrete", "Continuous", "Continuous", 
+           "Continuous", "Continuous", "Continuous", "Binary",
+           "Binary", "Discrete", "Discrete")
+)
+
+kable(data_summary, caption = "Variable Descriptions")
+```
+
+### Preliminary Analysis
+
+- This section reports summary statistics, histograms, plots, and other similar information. 
+
+- It is designed to give the reader a sense of what your sample looks like. 
+
+- In reporting this information, you should be selective - more is not always better. 
+
+- You need to decide which information you need/want to convey to the reader and how to best convey it.
+
+
+```{r preliminary-analysis, echo=FALSE}
+# Summary statistics for key variables
+key_vars <- mtcars %>%
+  select(mpg, wt, disp, hp, am) %>%
+  summary()
+
+# Correlation matrix
+cor_matrix <- cor(mtcars[, c("mpg", "wt", "disp", "hp", "am")])
+kable(round(cor_matrix, 3), caption = "Correlation Matrix of Key Variables")
+
+# Visualization of key relationships
+par(mfrow = c(2, 2))
+plot(mtcars$wt, mtcars$mpg, 
+     xlab = "Weight (1000 lbs)", ylab = "MPG",
+     main = "Weight vs Fuel Efficiency")
+abline(lm(mpg ~ wt, data = mtcars), col = "red")
+
+plot(mtcars$disp, mtcars$mpg,
+     xlab = "Displacement (cu.in.)", ylab = "MPG",
+     main = "Engine Size vs Fuel Efficiency")
+abline(lm(mpg ~ disp, data = mtcars), col = "red")
+
+boxplot(mpg ~ am, data = mtcars,
+        names = c("Automatic", "Manual"),
+        main = "Fuel Efficiency by Transmission Type",
+        ylab = "MPG")
+
+plot(mtcars$hp, mtcars$mpg,
+     xlab = "Horsepower", ylab = "MPG",
+     main = "Horsepower vs Fuel Efficiency")
+abline(lm(mpg ~ hp, data = mtcars), col = "red")
+```
+
+### Model and Empirical Methodology
+
+
+- Your model is how you make predictions of what you expect to find in the data. 
+
+- Your model is what implies a causal relationship between the economic variables. While you may detect a positive or negative relationship in the data, this alone tells you nothing about which variable is causing a change in the other variable. The economic model can be used to model this relationship.
+
+### Empirical Methodology
+
+This is also where you describe to the reader how you plan to test the relationships implied by your economic/theoretical model. 
+
+- First, you want to identify your dependent variable. This is the variable you are seeking to explain the behavior of. 
+
+- Next, you want to identify possible explanatory variables. These are the variables that could potentially affect your dependent variable. 
+
+- Often in economic models, there are abstract notions of how some variables affect others. For example, human capital affects production, but how would we measure human capital in the data? You can find suitable proxies for a variable like human capital by familiarizing yourself with the literature. 
+
+- Often in this section, the researcher will point out potential estimation issues, highlighting the need for more advanced econometric techniques that go beyond ordinary least squares (OLS).
+
+
+```{r empirical-model, echo=FALSE}
+# Basic OLS model
+model1 <- lm(mpg ~ wt, data = mtcars)
+model2 <- lm(mpg ~ wt + am, data = mtcars)
+model3 <- lm(mpg ~ wt + am + disp, data = mtcars)
+model4 <- lm(mpg ~ wt + am + disp + hp, data = mtcars)
+
+# Create a comparison table (simplified for HTML)
+model_comparison <- data.frame(
+  Variables = c("Weight", "Manual Trans.", "Displacement", "Horsepower", "R-squared", "Adj. R-squared"),
+  Model_1 = c(round(coef(model1)[2], 3), NA, NA, NA, 
+              round(summary(model1)$r.squared, 3),
+              round(summary(model1)$adj.r.squared, 3)),
+  Model_2 = c(round(coef(model2)[2], 3), round(coef(model2)[3], 3), NA, NA,
+              round(summary(model2)$r.squared, 3),
+              round(summary(model2)$adj.r.squared, 3)),
+  Model_3 = c(round(coef(model3)[2], 3), round(coef(model3)[3], 3), 
+              round(coef(model3)[4], 3), NA,
+              round(summary(model3)$r.squared, 3),
+              round(summary(model3)$adj.r.squared, 3)),
+  Model_4 = c(round(coef(model4)[2], 3), round(coef(model4)[3], 3), 
+              round(coef(model4)[4], 3), round(coef(model4)[5], 3),
+              round(summary(model4)$r.squared, 3),
+              round(summary(model4)$adj.r.squared, 3))
+)
+
+kable(model_comparison, caption = "Model Comparison")
+```
+
+## 6. Results Presentation
+
+### Key Guidelines:
+
+
+- Focus only on what is important and be as clear as possible. Both smart and dumb readers will appreciate you pointing things out directly and clearly.
+
+
+- Less is more - focus on relevant results only. Reporting a small group of relevant results is better than covering every possible statistical analysis that could be made on the data.
+
+- Properly describe all tables/figures
+
+- **Remember: Negative results are still valid results!**. Sometimes a simple “we see that such methodology is not suitable for this specific problem” or “we’ve seen that the results say the contrary of our hypothesis” is much more appreciated than long and stretched fantasies about a single regression with one slightly significant coefficient
+
+
+### Example Results:
+
+```{r results, echo=FALSE}
+# Final model with interactions
+final_model <- lm(mpg ~ wt * am + disp + hp, data = mtcars)
+summary(final_model)
+
+# Visualize the interaction effect
+mtcars$trans_type <- factor(mtcars$am, labels = c("Automatic", "Manual"))
+
+ggplot(mtcars, aes(x = wt, y = mpg, color = trans_type)) +
+  geom_point(size = 3) +
+  geom_smooth(method = "lm", se = TRUE) +
+  labs(title = "Fuel Efficiency by Weight and Transmission Type",
+       x = "Weight (1000 lbs)",
+       y = "Miles Per Gallon",
+       color = "Transmission") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+# Create predictions for policy implications
+new_data <- expand.grid(
+  wt = seq(2, 5, by = 0.5),
+  am = c(0, 1),
+  disp = mean(mtcars$disp),
+  hp = mean(mtcars$hp)
+)
+
+new_data$predicted_mpg <- predict(final_model, new_data)
+new_data$trans_type <- factor(new_data$am, labels = c("Automatic", "Manual"))
+
+# Policy implications table
+policy_table <- new_data %>%
+  group_by(trans_type) %>%
+  summarise(
+    avg_mpg = mean(predicted_mpg),
+    mpg_light = predicted_mpg[wt == 2],
+    mpg_heavy = predicted_mpg[wt == 5],
+    efficiency_loss = mpg_light - mpg_heavy
+  )
+
+kable(policy_table, 
+      caption = "Predicted Fuel Efficiency by Vehicle Type",
+      digits = 2)
+```
+
+### Results Summary:
+
+Our analysis reveals that:
+
+1. **Weight is the dominant factor**: Each 1,000-pound increase reduces MPG by approximately 5.3 miles
+
+2. **Transmission matters**: Manual transmission vehicles achieve 7.24 higher MPG on average
+
+3. **Combined effect**: The weight penalty is slightly less severe for manual transmission vehicles
+
+4. **Model fit**: Our full model explains 84% of the variation in fuel efficiency
+
+## 7. Conclusion (3 paragraphs)
+
+Provide a short summary of everything you have said up to this point. Refer to the original question, repeat your proposed solution or claim, and suggest what the result of your project will be and what impact it will have on the field of study, economic studies, and related disciplines.
+
+
+**Paragraph 1**: Restate research question + literature summary + theoretical answer
+
+> This study examined the determinants of automobile fuel efficiency, addressing gaps in previous literature that studied factors in isolation. Our theoretical framework predicted negative relationships between fuel efficiency and both weight and engine size, with manual transmissions expected to outperform automatic ones.
+
+**Paragraph 2**: Your empirical findings + comparison with existing literature
+
+> Our empirical analysis confirms these predictions, with weight emerging as the strongest predictor of fuel efficiency. The 5.3 MPG reduction per 1,000 pounds aligns with Smith (2019) but exceeds Johnson's (2020) estimate of 4.1 MPG. The transmission advantage of 7.24 MPG is novel, as previous studies didn't control for weight and engine characteristics simultaneously.
+
+**Paragraph 3**: Policy implications + future research directions
+
+> These findings suggest that fuel efficiency standards should prioritize weight reduction, potentially saving 20-30% in fuel consumption. Incentives for manual transmissions could provide additional benefits. Future research should examine hybrid powertrains and the cost-effectiveness of weight reduction technologies.
+
+# Presentation Tips for Groups
+
+## Before Your Presentation:
+
+```{r presentation-prep, eval=FALSE}
+# Example code to prepare presentation materials
+# Save key figures
+ggsave("weight_mpg_plot.png", width = 8, height = 6)
+
+# Create summary statistics table
+summary_stats <- mtcars %>%
+  group_by(am) %>%
+  summarise(
+    n = n(),
+    avg_mpg = mean(mpg),
+    sd_mpg = sd(mpg)
+  )
+
+# Export regression results
+stargazer(model1, model2, model3, model4,
+          type = "html",
+          out = "regression_results.html")
+```
+
+1. Ensure all members understand every section
+
+2. Practice transitions between speakers
+
+3. Time your presentation carefully
+
+4. Prepare for questions on methodology and results
+
+## During Your Presentation:
+
+1. Start with a clear roadmap
+
+2. Emphasize your research question early
+
+3. Be honest about limitations
+
+4. End with clear takeaways
+
+## Common Pitfalls to Avoid:
+
+- Overcomplicating the research question
+
+- Ignoring existing literature
+
+- Weak methodology section
+
+- Overstating results
+
+- Poor time management
+
+
+
+# Remember: Quality Over Complexity
+
+Your goal is to demonstrate:
+
+- Clear thinking about a problem
+
+- Understanding of research methods
+
+- Ability to contribute to economic knowledge
+
+- Professional presentation skills
+
+**Focus on doing one thing well rather than attempting too much!** Don't do tons of things...
+
+![](boris.gif)
+
+---
+
+*Good luck with your group presentations!*

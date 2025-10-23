@@ -1,0 +1,968 @@
+---
+title: "Practice 7 - Clustering"
+author: "Lorenzo Rossi"
+date: !r Sys.Date()
+output: 
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+# Introduction
+
+This practice session covers two fundamental clustering methods:
+
+1. **K-means clustering**: A partitioning method that divides data into K distinct clusters
+
+2. **Hierarchical clustering**: A method that builds a hierarchy of clusters
+
+## What is Cluster Analysis?
+
+According to Hastie, Tibshirani & Friedman, "Cluster analysis has a variety of goals. All relate to grouping or segmenting a collection of objects into subsets or 'clusters', such that those within each cluster are more closely related to one another than objects assigned to different clusters."
+
+Key characteristics:
+
+- **Unsupervised learning**: Like PCA, clustering discovers structures in data without predefined labels
+
+- **Similarity-based**: Groups are formed based on similarity (or dissimilarity) between objects
+
+- **Applications**: Market segmentation, customer categorization, regional analysis for policy interventions
+
+## Load Required Libraries
+
+```{r libraries}
+# Install packages if needed
+# install.packages(c("tidyverse", "cluster", "factoextra", "dendextend"))
+library(fpc)
+library(dplyr)
+library(knitr)
+library(tidyverse)
+library(cluster)
+library(factoextra)
+library(dendextend)
+```
+
+# Dataset Preparation
+
+We'll use multiple datasets to demonstrate different aspects of clustering.
+
+## 1. Iris Dataset (Built-in)
+
+```{r iris-data}
+# Load and prepare iris data
+data(iris)
+iris_scaled <- scale(iris[, 1:4])  # Scale numeric columns
+head(iris_scaled)
+```
+
+## 2. Generate Synthetic Data
+
+```{r}
+# Generate synthetic 2D data for visualization
+set.seed(123)
+n <- 150
+
+# Create three well-separated clusters
+cluster1 <- data.frame(
+  x = rnorm(n/3, mean = 0, sd = 0.5),
+  y = rnorm(n/3, mean = 0, sd = 0.5),
+  true_cluster = 1
+)
+
+cluster2 <- data.frame(
+  x = rnorm(n/3, mean = 3, sd = 0.5),
+  y = rnorm(n/3, mean = 3, sd = 0.5),
+  true_cluster = 2
+)
+
+cluster3 <- data.frame(
+  x = rnorm(n/3, mean = 0, sd = 0.5),
+  y = rnorm(n/3, mean = 3, sd = 0.5),
+  true_cluster = 3
+)
+
+synthetic_data <- rbind(cluster1, cluster2, cluster3)
+
+# Plot synthetic data
+ggplot(synthetic_data, aes(x = x, y = y, color = factor(true_cluster))) +
+  geom_point(size = 3) +
+  labs(title = "Synthetic Data with True Clusters",
+       color = "True Cluster") +
+  theme_minimal()
+```
+
+# Distance Measures
+
+Before clustering, we need to measure similarity/dissimilarity between objects. This is crucial as results depend heavily on the chosen distance metric.
+
+## Common Distance Metrics
+
+```{r}
+# Create sample data
+set.seed(123)
+point1 <- c(0, 0)
+point2 <- c(3, 4)
+
+# Euclidean distance (most common)
+euclidean_dist <- dist(rbind(point1, point2), method = "euclidean")
+cat("Euclidean distance:", as.numeric(euclidean_dist), "\n")
+
+# Manhattan distance (L1 norm)
+manhattan_dist <- dist(rbind(point1, point2), method = "manhattan")
+cat("Manhattan distance:", as.numeric(manhattan_dist), "\n")
+
+# Maximum distance (Chebyshev)
+maximum_dist <- dist(rbind(point1, point2), method = "maximum")
+cat("Maximum distance:", as.numeric(maximum_dist), "\n")
+```
+
+## Importance of Scaling
+
+Variables with different units or scales can dominate distance calculations:
+
+```{r}
+# Example: Age (years) vs Income (thousands)
+data_unscaled <- data.frame(
+  Age = c(25, 30, 60),
+  Income = c(30, 35, 80)
+)
+
+# Distance matrix without scaling
+cat("Distances without scaling:\n")
+print(round(dist(data_unscaled), 2))
+
+# Scale the data
+data_scaled <- scale(data_unscaled)
+
+# Distance matrix with scaling
+cat("\nDistances with scaling:\n")
+print(round(dist(data_scaled), 2))
+```
+
+# Handling Categorical and Mixed Data Types
+
+## Categorical Data Challenges
+
+When attributes are categorical variables, proper distances cannot be computed. Instead, we use similarity or dissimilarity indices.
+
+### Binary Categorical Variables
+
+For binary attributes, we can create a cross-tabulation to count matches and mismatches:
+
+```{r}
+# Example: Customer features (1 = has feature, 0 = doesn't have feature)
+# Features: Online_Shopping, Premium_Member, Newsletter_Subscriber
+customer1 <- c(1, 1, 0)
+customer2 <- c(1, 0, 1)
+customer3 <- c(0, 1, 1)
+
+# Create binary data matrix
+binary_data <- rbind(customer1, customer2, customer3)
+colnames(binary_data) <- c("Online", "Premium", "Newsletter")
+rownames(binary_data) <- c("Cust1", "Cust2", "Cust3")
+
+print(binary_data)
+
+# Calculate Jaccard similarity manually for first two customers
+matches_11 <- sum(customer1 == 1 & customer2 == 1)  # Both have feature
+matches_total <- sum(customer1 == 1 | customer2 == 1)  # At least one has feature
+jaccard_sim <- matches_11 / matches_total
+
+cat("\nJaccard similarity between Customer 1 and 2:", jaccard_sim, "\n")
+
+# Using R's dist function with binary method
+binary_dist <- dist(binary_data, method = "binary")
+cat("\nBinary distance matrix:\n")
+print(round(binary_dist, 3))
+```
+
+### Common Similarity Indices for Binary Data
+
+- **Simple Matching**: (matches) / (total comparisons)
+
+- **Jaccard**: (positive matches) / (positive matches + mismatches)
+
+- **Russell-Rao**: (positive matches) / (total attributes)
+
+## Mixed Data Types: The Gower Distance
+
+Imagine comparing people using both numbers (age, income) and categories (favorite color, job type). How do you measure the "distance" between someone who is 25 years old and likes blue versus someone who is 30 and likes red? Regular distance formulas don't work! 
+
+1. The Gower distance handles mixed data types (continuous, categorical, binary).
+
+How it works:
+
+- For numbers: Scales them to 0-1 range (like converting all currencies to percentages)
+
+- For categories: Gives 1 point if they match, 0 if they don't
+
+- Final score: Average of all comparisons
+
+
+Example: Comparing two customers:
+
+- Age difference: 30 vs 25 = 0.2 similarity (after scaling)
+
+- City match: NYC vs NYC = 1.0 similarity
+
+- Premium member: Yes vs No = 0.0 similarity
+
+- Gower distance combines these fairly
+
+```{r}
+# Install if needed: install.packages("cluster")
+library(cluster)
+
+# Create mixed data
+mixed_data <- data.frame(
+  Age = c(25, 45, 30, 60, 35),  # Continuous
+  Income = c(30000, 75000, 45000, 50000, 80000),  # Continuous
+  Gender = factor(c("M", "F", "M", "F", "M")),  # Categorical
+  Premium = c(TRUE, TRUE, FALSE, TRUE, FALSE),  # Binary
+  Education = factor(c("HS", "PhD", "BS", "MS", "BS"))  # Categorical
+)
+
+rownames(mixed_data) <- paste0("Person", 1:5)
+
+# Calculate Gower distance
+gower_dist <- daisy(mixed_data, metric = "gower")
+
+cat("Gower distance matrix:\n")
+print(round(as.matrix(gower_dist), 3))
+
+# Perform hierarchical clustering on mixed data
+mixed_hc <- hclust(gower_dist, method = "complete")
+plot(mixed_hc, main = "Hierarchical Clustering with Mixed Data Types")
+```
+
+## Practical Example: Customer Segmentation with Mixed Data
+
+```{r}
+# Generate realistic customer data
+set.seed(789)
+n_customers <- 100
+
+customers_mixed <- data.frame(
+  Age = round(rnorm(n_customers, mean = 40, sd = 15)),
+  Annual_Spend = round(rnorm(n_customers, mean = 5000, sd = 2000)),
+  Visit_Frequency = sample(c("Low", "Medium", "High"), n_customers, 
+                          replace = TRUE, prob = c(0.3, 0.5, 0.2)),
+  Member_Type = sample(c("Basic", "Premium"), n_customers, 
+                      replace = TRUE, prob = c(0.7, 0.3)),
+  Uses_App = sample(c(TRUE, FALSE), n_customers, replace = TRUE)
+)
+
+customers_mixed$Visit_Frequency <- as.factor(customers_mixed$Visit_Frequency)
+customers_mixed$Member_Type <- as.factor(customers_mixed$Member_Type)
+customers_mixed$Uses_App <- as.factor(customers_mixed$Uses_App)  # Logical → factor
+
+# Calculate Gower distance
+cust_gower <- daisy(customers_mixed, metric = "gower")
+```
+
+
+# K-means Clustering
+
+## Theory
+
+K-means clustering aims to partition n observations into k clusters where each observation belongs to the cluster with the nearest mean (cluster center).
+
+**Key characteristics:**
+- **Top-down approach**: Assumes the number of clusters K is determined a priori
+- **Iterative optimization**: Minimizes within-cluster sum of squares
+- **Sensitive to initialization**: Results can vary based on starting points
+
+**Algorithm steps:**
+1. Choose K initial cluster centers (randomly or using k-means++)
+2. Assign each point to the nearest cluster center
+3. Recalculate cluster centers as the mean of assigned points
+4. Repeat steps 2-3 until convergence:
+   - No re-allocation occurs (clusters don't change)
+   - Change in centroids is below a threshold
+   - Maximum number of iterations is reached
+
+**Convergence and Stability:**
+- K-means tends to be unstable with different initial seeds
+- Can find local minima rather than global optimum
+- Use `nstart` parameter in R to run multiple random starts
+
+**When using Euclidean distance:**
+- K-means minimizes within-group variance
+- R² can be used as a goodness-of-fit indicator
+- R² = Between-cluster SS / Total SS
+
+## Example 1: K-means on Synthetic Data
+
+```{r}
+# Remove true cluster column for clustering
+synthetic_features <- synthetic_data[, c("x", "y")]
+
+# Apply k-means with k=3
+kmeans_result <- kmeans(synthetic_features, centers = 3, nstart = 25)
+
+# Add cluster assignments to data
+synthetic_data$kmeans_cluster <- factor(kmeans_result$cluster)
+
+# Visualize results
+ggplot(synthetic_data, aes(x = x, y = y, color = kmeans_cluster)) +
+  geom_point(size = 3) +
+  geom_point(data = as.data.frame(kmeans_result$centers), 
+             aes(x = x, y = y), 
+             color = "black", size = 5, shape = 17) +
+  labs(title = "K-means Clustering Results",
+       subtitle = "Black triangles show cluster centers",
+       color = "Cluster") +
+  theme_minimal()
+
+# Compare with true clusters
+table(True = synthetic_data$true_cluster, 
+      Predicted = synthetic_data$kmeans_cluster)
+```
+
+## Understanding K-means Instability
+
+```{r}
+# Demonstrate sensitivity to initialization
+set.seed(1)
+km1 <- kmeans(synthetic_features, centers = 3, nstart = 1)
+set.seed(2)
+km2 <- kmeans(synthetic_features, centers = 3, nstart = 1)
+
+# Compare results
+cat("Do the two runs give the same result?", 
+    all(km1$cluster == km2$cluster), "\n")
+
+# Show importance of nstart
+km_best <- kmeans(synthetic_features, centers = 3, nstart = 25)
+cat("\nTotal within-cluster sum of squares:\n")
+cat("Single start (seed 1):", km1$tot.withinss, "\n")
+cat("Single start (seed 2):", km2$tot.withinss, "\n")
+cat("Best of 25 starts:", km_best$tot.withinss, "\n")
+```
+
+## Example 2: K-means on Iris Data
+
+```{r}
+# Determine optimal number of clusters using elbow method
+fviz_nbclust(iris_scaled, kmeans, method = "wss") +
+  labs(title = "Elbow Method for Optimal K")
+
+# Apply k-means with k=3
+iris_kmeans <- kmeans(iris_scaled, centers = 3, nstart = 25)
+
+# Visualize using PCA
+fviz_cluster(iris_kmeans, data = iris_scaled,
+             palette = c("#2E9FDF", "#00AFBB", "#E7B800"),
+             geom = "point",
+             ellipse.type = "convex",
+             ggtheme = theme_minimal())
+
+# Compare with true species
+table(True = iris$Species, 
+      Predicted = iris_kmeans$cluster)
+```
+
+## K-means Evaluation
+
+```{r}
+# Within-cluster sum of squares
+cat("Within-cluster sum of squares:", iris_kmeans$tot.withinss, "\n")
+
+# Between-cluster sum of squares
+cat("Between-cluster sum of squares:", iris_kmeans$betweenss, "\n")
+
+# Silhouette analysis
+sil <- silhouette(iris_kmeans$cluster, dist(iris_scaled))
+fviz_silhouette(sil)
+```
+
+# Hierarchical Clustering
+
+## Theory
+
+Hierarchical clustering builds a hierarchy of clusters using either:
+
+- **Agglomerative** (bottom-up): Start with N clusters (individual points), merge closest clusters iteratively
+
+- **Divisive** (top-down): Start with all data in one cluster, recursively split
+
+**Key characteristics:**
+
+- **Bottom-up approach**: Iteratively merges the nearest clusters formed at the previous step
+
+- **Dendrogram output**: Provides a tree-like visualization showing relationships at all levels
+
+- **No pre-specified K**: Number of clusters can be chosen after seeing the dendrogram
+
+- **No reallocation**: Once merged, points cannot be separated (unlike K-means)
+
+**Algorithm steps:**
+
+1. Compute initial distance matrix between all units
+
+2. Find the nearest units and aggregate them into a cluster
+
+3. Re-compute the distance matrix (now including cluster-to-cluster distances)
+
+4. Find the nearest units/clusters and merge them
+
+5. Repeat steps 3-4 until only one cluster remains
+
+**Linkage methods**
+
+1. **Single Linkage (Nearest Neighbor)**
+
+- How it works: Looks at the two closest points between groups - like saying "these groups are close because Person X from Group A and Person Y from Group B are best friends"
+
+- What happens: Groups can merge even if most ponts are not close, as long as one pair is close
+
+- Result: Creates long, stretched-out clusters
+
+- When to use: When you expect your groups to have irregular, snake-like shapes
+
+2. **Complete linkage** (farthest neighbor):
+
+ -  How it works: Looks at the two most distant people between groups - like saying "these groups can only merge if EVERYONE is reasonably close"
+
+- What happens: Very cautious about merging - waits until all members are near each other
+
+- Result: Creates tight, round clusters
+
+- When to use: When you want compact, well-separated groups
+
+3. **Average linkage**:
+
+ - How it works: Takes the average distance between all pairs of people from different groups
+ 
+- What happens: Balances between being too eager (single) and too cautious (complete)
+
+- Result: Creates moderately shaped clusters
+
+- When to use: General purpose - a safe middle ground
+
+4. **Centroid method**:
+
+- How it works: Finds the "center point" of each group and measures distance between these centers
+
+- What happens: Like comparing the average position of each group
+
+- Watch out: Sometimes creates confusing results where smaller groups seem to "jump over" larger ones
+
+5. **Ward's method**:
+
+ -  How it works: Merges groups that increase the overall "messiness" (variance) the least
+
+- What happens: Tries to keep groups as tight and organized as possible
+
+- Result: Usually creates balanced, similar-sized clusters
+
+- When to use: Often the best choice for most situations
+
+
+## Example 1: Hierarchical Clustering on Synthetic Data
+
+```{r}
+# Calculate distance matrix
+dist_matrix <- dist(synthetic_features, method = "euclidean")
+
+# Perform hierarchical clustering with different linkage methods
+hc_single <- hclust(dist_matrix, method = "single")
+hc_complete <- hclust(dist_matrix, method = "complete")
+hc_average <- hclust(dist_matrix, method = "average")
+hc_ward <- hclust(dist_matrix, method = "ward.D2")
+
+# Plot dendrograms
+par(mfrow = c(2, 2))
+plot(hc_single, main = "Single Linkage", xlab = "", sub = "")
+plot(hc_complete, main = "Complete Linkage", xlab = "", sub = "")
+plot(hc_average, main = "Average Linkage", xlab = "", sub = "")
+plot(hc_ward, main = "Ward Linkage", xlab = "", sub = "")
+par(mfrow = c(1, 1))
+```
+
+## Understanding Linkage Effects
+
+```{r}
+# Demonstrate chain effect with single linkage
+# Cut dendrograms at k=3
+single_clusters <- cutree(hc_single, k = 3)
+complete_clusters <- cutree(hc_complete, k = 3)
+ward_clusters <- cutree(hc_ward, k = 3)
+
+# Create comparison plots
+par(mfrow = c(1, 3))
+plot(synthetic_features, col = single_clusters, pch = 19,
+     main = "Single Linkage\n(Chain Effect)", xlab = "x", ylab = "y")
+plot(synthetic_features, col = complete_clusters, pch = 19,
+     main = "Complete Linkage\n(Spherical Clusters)", xlab = "x", ylab = "y")
+plot(synthetic_features, col = ward_clusters, pch = 19,
+     main = "Ward's Method\n(Balanced Clusters)", xlab = "x", ylab = "y")
+par(mfrow = c(1, 1))
+
+# Compare cluster sizes
+cat("Cluster sizes by method:\n")
+cat("Single linkage:", table(single_clusters), "\n")
+cat("Complete linkage:", table(complete_clusters), "\n")
+cat("Ward's method:", table(ward_clusters), "\n")
+```
+
+## Example 2: Hierarchical Clustering on Iris Data
+
+```{r}
+# Calculate distance matrix
+iris_dist <- dist(iris_scaled, method = "euclidean")
+
+# Hierarchical clustering using Ward's method
+iris_hc <- hclust(iris_dist, method = "ward.D2")
+
+# Create dendrogram
+iris_dend <- as.dendrogram(iris_hc)
+
+# Color branches by cutting into 3 clusters
+iris_dend <- color_branches(iris_dend, k = 3)
+
+# Plot enhanced dendrogram
+plot(iris_dend, main = "Iris Hierarchical Clustering Dendrogram")
+
+# Add horizontal line to show where we cut
+abline(h = 9, col = "red", lty = 2)
+
+# Cut tree to get 3 clusters
+iris_hc_clusters <- cutree(iris_hc, k = 3)
+
+# Visualize clusters
+fviz_cluster(list(data = iris_scaled, cluster = iris_hc_clusters),
+             palette = c("#2E9FDF", "#00AFBB", "#E7B800"),
+             geom = "point",
+             ellipse.type = "convex",
+             ggtheme = theme_minimal())
+
+# Compare with true species
+table(True = iris$Species, 
+      Predicted = iris_hc_clusters)
+```
+
+## Understanding Dendrograms
+
+```{r}
+# Focus on Ward's method dendrogram
+plot(hc_ward, main = "Understanding the Dendrogram", 
+     xlab = "Sample Index", ylab = "Height (Distance)")
+
+# Add annotations
+abline(h = c(5, 10, 15), col = c("red", "blue", "green"), lty = 2)
+text(75, 5.5, "Cut for many clusters", col = "red", cex = 0.8)
+text(75, 10.5, "Cut for moderate clusters", col = "blue", cex = 0.8)
+text(75, 15.5, "Cut for few clusters", col = "green", cex = 0.8)
+
+# Show fusion levels
+fusion_levels <- hc_ward$height
+cat("\nFusion levels (distances at which clusters merge):\n")
+print(tail(fusion_levels, 10))  # Last 10 merges
+
+# Identify large jumps in fusion levels
+jumps <- diff(fusion_levels)
+large_jumps <- which(jumps > quantile(jumps, 0.9))
+cat("\nLarge jumps occur at merges:", large_jumps, "\n")
+cat("Suggesting", length(large_jumps) + 1, "might be a good number of clusters\n")
+```
+
+# Key Considerations in Cluster Analysis
+
+Based on lecture material, several aspects must be considered:
+
+## 1. Variable Selection
+
+- Include all relevant variables for clustering
+
+- Be cautious: adding irrelevant variables can worsen results
+
+- Consider using PCA as a preliminary step to select relevant variable subsets
+
+## 2. Distance/Similarity Measures
+
+- Results are sensitive to the chosen distance metric
+
+- Euclidean distance is most common but not always best
+
+- Consider variable scales and types (continuous vs categorical)
+
+## 3. Clustering Method Choice
+
+- **K-means**: 
+
+  - Fast, works well with spherical clusters
+  
+  - Requires pre-specified K
+  
+  - Can reallocate points between clusters
+  
+  - Sensitive to initialization
+  
+- **Hierarchical**: 
+
+  - Shows relationships at all levels
+  
+  - No reallocation once clusters are merged
+  
+  - Computationally intensive for large datasets
+  
+  - Results depend heavily on linkage method
+
+## 4. Number of Clusters
+
+- **K-means**: 
+
+  - Must be chosen a priori
+  
+  - Use elbow method, silhouette analysis, or gap statistic
+  
+  - Can use larger K to detect outliers
+  
+- **Hierarchical**: 
+
+  - Can be determined by examining the dendrogram
+  
+  - Look for large jumps in the fusion levels
+
+
+# Comparing K-means and Hierarchical Clustering
+
+```{r comparison}
+# Create comparison data frame
+comparison <- data.frame(
+  Sample = 1:nrow(iris),
+  True_Species = iris$Species,
+  Kmeans = iris_kmeans$cluster,
+  Hierarchical = iris_hc_clusters
+)
+
+# Calculate agreement between methods
+agreement <- sum(comparison$Kmeans == comparison$Hierarchical) / nrow(comparison)
+cat("Agreement between K-means and Hierarchical:", 
+    round(agreement * 100, 2), "%\n")
+
+# Visualize differences
+comparison_long <- comparison %>%
+  pivot_longer(cols = c(Kmeans, Hierarchical), 
+               names_to = "Method", 
+               values_to = "Cluster")
+
+ggplot(comparison_long, aes(x = Method, fill = factor(Cluster))) +
+  geom_bar(position = "fill") +
+  facet_wrap(~ True_Species) +
+  labs(title = "Cluster Assignments by Method and True Species",
+       y = "Proportion",
+       fill = "Cluster") +
+  theme_minimal()
+```
+
+# Practice Exercises
+
+## Exercise 1: Optimal K Selection
+
+```{r exercise1}
+# Use the gap statistic to determine optimal k for the iris dataset
+
+# Hint: Use fviz_nbclust() with method = "gap_stat"
+
+fviz_nbclust(iris_scaled, kmeans, method = "gap_stat") +
+  labs(title = "Gap Statistic for Optimal K")
+
+
+```
+
+## Exercise 2: Different Distance Metrics
+
+```{r exercise2}
+# Compare clustering results using different distance metrics
+# Try "euclidean", "manhattan", and "minkowski"
+
+dist_euc <- dist(iris_scaled, method = "euclidean")
+dist_man <- dist(iris_scaled, method = "manhattan")
+dist_mink <- dist(iris_scaled, method = "minkowski", p = 3)
+
+hc_euc <- hclust(dist_euc)
+hc_man <- hclust(dist_man)
+hc_mink <- hclust(dist_mink)
+
+par(mfrow = c(1, 3))
+plot(hc_euc, main = "Euclidean")
+plot(hc_man, main = "Manhattan")
+plot(hc_mink, main = "Minkowski")
+par(mfrow = c(1, 1))
+
+
+```
+
+## Exercise 3: Customer Segmentation Dataset
+
+```{r exercise3}
+# Create a customer dataset
+set.seed(456)
+customers <- data.frame(
+  Age = c(rnorm(50, 25, 5), rnorm(50, 45, 5), rnorm(50, 65, 5)),
+  Income = c(rnorm(50, 30000, 5000), rnorm(50, 60000, 10000), rnorm(50, 40000, 8000)),
+  Spending = c(rnorm(50, 200, 50), rnorm(50, 500, 100), rnorm(50, 300, 80))
+)
+
+# Apply both clustering methods to segment customers
+# Scale the data first!
+
+cust_scaled <- scale(customers)
+kmeans_cust <- kmeans(cust_scaled, centers = 3, nstart = 25)
+hc_cust <- hclust(dist(cust_scaled))
+
+cust_clusters <- cutree(hc_cust, k = 3)
+
+table(KMeans = kmeans_cust$cluster, HC = cust_clusters)
+
+
+```
+
+## Exercise 4: Mixed Data Clustering
+
+```{r exercise4}
+# Create a dataset with mixed data types and perform clustering
+# Include at least one continuous variable, one categorical, and one binary
+# Use Gower distance
+
+library(cluster)
+mixed_df <- data.frame(
+  Age = c(25, 45, 35, 50),
+  Gender = as.factor(c("M", "F", "F", "M")),
+  Subscribed = as.factor(c(TRUE, FALSE, TRUE, FALSE))
+)
+
+gower_dist <- daisy(mixed_df, metric = "gower")
+
+
+```
+
+## Application - Wine Clustering
+
+```{r exercise6}
+# This exercise demonstrates k-means on a real dataset
+# The Wine dataset contains chemical analysis of wines from Italy
+
+# Load the wine dataset (you'll need to download it from UCI repository)
+# For this exercise, we'll simulate similar data
+# Merge red and white wine datasets
+red_wine <- read.csv("winequality-red.csv", sep = ";")
+white_wine <- read.csv("winequality-white.csv", sep = ";")
+
+# Add type to each
+red_wine$Type <- 0 # Red
+white_wine$Type <- 1 # White
+
+# Combine into wine_data
+wine_data <- rbind(red_wine, white_wine)
+# Normalize the data
+wine_scaled <- scale(wine_data[, sapply(wine_data, is.numeric)])
+
+# Explore correlations
+library(corrplot)
+corrplot(cor(wine_data), type = "upper", method = "ellipse", tl.cex = 0.9,
+         main = "Wine Attributes Correlation Matrix")
+
+# Determine optimal number of clusters using elbow method
+wss <- numeric(10)
+for(i in 1:10) {
+  set.seed(1234)
+  wss[i] <- kmeans(wine_scaled, centers = i, nstart = 25)$tot.withinss
+}
+
+# Plot elbow curve
+plot(1:10, wss, type = "b", pch = 19,
+     xlab = "Number of Clusters", ylab = "Total Within-Cluster Sum of Squares",
+     main = "Elbow Method for Optimal k")
+abline(v = 3, col = "red", lty = 2)
+
+# Apply k-means with k=3
+set.seed(1234)
+wine_kmeans <- kmeans(wine_scaled, centers = 3, nstart = 25)
+
+# Analyze results
+cat("Cluster sizes:", wine_kmeans$size, "\n")
+cat("Between-cluster SS / Total SS:", 
+    round(wine_kmeans$betweenss/wine_kmeans$totss, 3), "\n")
+
+# Visualize clustering results
+wine_data$Cluster <- as.factor(wine_kmeans$cluster)
+
+# Create pairwise plots for key variables
+# Pairwise plots with valid variables
+par(mfrow = c(2, 2))
+plot(wine_data$alcohol, wine_data$volatile.acidity, col = wine_data$Cluster,
+     main = "Alcohol vs Volatile Acidity")
+plot(wine_data$citric.acid, wine_data$residual.sugar, col = wine_data$Cluster,
+     main = "Citric Acid vs Residual Sugar")
+plot(wine_data$density, wine_data$alcohol, col = wine_data$Cluster,
+     main = "Density vs Alcohol")
+plot(wine_data$sulphates, wine_data$citric.acid, col = wine_data$Cluster,
+     main = "Sulphates vs Citric Acid")
+par(mfrow = c(1, 1))
+
+# Cluster profiles
+profile <- aggregate(wine_data[, sapply(wine_data, is.numeric)], 
+                     by = list(Cluster = wine_data$Cluster), mean)
+
+profile_rounded <- profile %>%
+  mutate(across(where(is.numeric), round, 2))
+kable(profile_rounded)
+
+# Questions to consider:
+# 1. What characteristics distinguish each cluster?
+# 2. Could these represent different wine varieties or quality levels?
+# 3. Which variables are most important for clustering?
+# 4. Try hierarchical clustering and compare results
+
+```
+
+# Real-World Case Study: Wine Clustering
+
+This section demonstrates a complete clustering analysis workflow using wine chemistry data.
+
+## Data Exploration and Visualization
+
+```{r }
+# Using our simulated wine data from Exercise 6
+# Let's create more comprehensive visualizations
+
+# Density plots for each attribute
+wine_long <- wine_data %>%
+  select(where(is.numeric)) %>%
+  pivot_longer(cols = everything(), names_to = "Attribute", values_to = "Value")
+
+ggplot(wine_long, aes(x = Value, fill = Attribute)) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(~ Attribute, scales = "free") +
+  theme_minimal() +
+  labs(title = "Distribution of Wine Chemical Properties",
+       subtitle = "Each attribute shows different patterns") +
+  theme(legend.position = "none")
+
+# Boxplots to identify outliers
+ggplot(wine_long, aes(x = Attribute, y = Value, fill = Attribute)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Wine Attributes - Boxplot Analysis",
+       subtitle = "Checking for outliers and spread") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none")
+```
+
+## Determining Optimal Clusters
+
+```{r}
+# Multiple methods to determine optimal k
+
+# 1. Elbow Method (already shown)
+# 2. Silhouette Method
+library(cluster)
+silhouette_score <- function(k){
+  km <- kmeans(wine_scaled, centers = k, nstart = 25)
+  ss <- silhouette(km$cluster, dist(wine_scaled))
+  mean(ss[, 3])
+}
+
+k_values <- 2:10
+sil_scores <- sapply(k_values, silhouette_score)
+
+plot(k_values, sil_scores, type = "b", pch = 19,
+     xlab = "Number of Clusters", ylab = "Average Silhouette Score",
+     main = "Silhouette Method for Optimal k")
+abline(v = k_values[which.max(sil_scores)], col = "red", lty = 2)
+
+# 3. Gap Statistic
+library(factoextra)
+gap_stat <- clusGap(wine_scaled, FUN = kmeans, nstart = 25,
+                    K.max = 10, B = 20)
+fviz_gap_stat(gap_stat) + 
+  labs(title = "Gap Statistic for Optimal k")
+```
+
+## Advanced Visualization with PCA
+
+```{r wine-pca-viz, fig.align='center'}
+# Use PCA to visualize clusters in 2D
+pca_wine <- prcomp(wine_scaled)
+pca_coords <- as.data.frame(pca_wine$x[, 1:2])
+pca_coords$Cluster <- as.factor(wine_kmeans$cluster)
+
+# Variance explained
+var_explained <- round(100 * summary(pca_wine)$importance[2, 1:2], 1)
+
+ggplot(pca_coords, aes(x = PC1, y = PC2, color = Cluster)) +
+  geom_point(size = 3, alpha = 0.7) +
+  stat_ellipse(level = 0.95, linetype = "dashed") +
+  labs(title = "Wine Clusters in PCA Space",
+       subtitle = paste0("PC1 (", var_explained[1], "%) vs PC2 (", var_explained[2], "%)"),
+       x = paste0("PC1 (", var_explained[1], "% variance)"),
+       y = paste0("PC2 (", var_explained[2], "% variance)")) +
+  theme_minimal() +
+  scale_color_manual(values = c("#E41A1C", "#377EB8", "#4DAF4A"))
+```
+
+## Cluster Validation and Interpretation
+
+```{r wine-validation}
+# Internal validation metrics
+wine_stats <- cluster.stats(dist(wine_scaled), wine_kmeans$cluster)
+
+cat("Clustering Quality Metrics:\n")
+cat("Average silhouette width:", round(wine_stats$avg.silwidth, 3), "\n")
+cat("Dunn index:", round(wine_stats$dunn, 3), "\n")
+cat("Within-cluster SS:", round(wine_kmeans$tot.withinss, 2), "\n")
+cat("Between-cluster SS:", round(wine_kmeans$betweenss, 2), "\n")
+cat("Ratio (Between/Total):", round(wine_kmeans$betweenss/wine_kmeans$totss, 3), "\n")
+
+# Create a heatmap of cluster centers
+library(reshape2)
+centers_df <- as.data.frame(wine_kmeans$centers)
+centers_df$Cluster <- paste("Cluster", 1:3)
+centers_long <- melt(centers_df, id.vars = "Cluster")
+
+ggplot(centers_long, aes(x = variable, y = Cluster, fill = value)) +
+  geom_tile() +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
+  theme_minimal() +
+  labs(title = "Cluster Centers Heatmap",
+       subtitle = "Standardized values show cluster characteristics",
+       x = "Wine Attribute", fill = "Standardized\nValue") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+## Comparing with Hierarchical Clustering
+
+```{r}
+# Apply hierarchical clustering
+wine_hc <- hclust(dist(wine_scaled), method = "ward.D2")
+hc_clusters <- cutree(wine_hc, k = 3)
+
+# Compare k-means and hierarchical clustering
+comparison_table <- table(k_means = wine_kmeans$cluster, 
+                         hierarchical = hc_clusters)
+print(comparison_table)
+
+# Calculate agreement
+agreement <- sum(diag(comparison_table)) / sum(comparison_table)
+cat("\nAgreement between methods:", round(agreement * 100, 1), "%\n")
+
+# Visualize dendrogram with cluster colors
+plot(wine_hc, main = "Wine Hierarchical Clustering Dendrogram", 
+     xlab = "", sub = "")
+rect.hclust(wine_hc, k = 3, border = 2:4)
+```
+
+# Additional Resources
+
+- [K-means Clustering](https://en.wikipedia.org/wiki/K-means_clustering)
+- [Hierarchical Clustering](https://en.wikipedia.org/wiki/Hierarchical_clustering)
+- [Cluster Validation](https://en.wikipedia.org/wiki/Cluster_analysis#Evaluation_and_assessment)
+- [R Documentation for cluster package](https://cran.r-project.org/web/packages/cluster/cluster.pdf)
+- Hastie, Tibshirani & Friedman - "The Elements of Statistical Learning"
+- Chapter 12.4 of "An Introduction to Statistical Learning in R" (ISLR)

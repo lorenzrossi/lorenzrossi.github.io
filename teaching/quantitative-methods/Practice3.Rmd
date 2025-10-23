@@ -1,0 +1,662 @@
+---
+title: "Practice 3 - Decriptive Statistics (Part 2) and Inference"
+author: "Lorenzo Rossi"
+date: "2025-04-17"
+output:
+  pdf_document: 
+      latex_engine: xelatex
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Why Study Distributions?
+
+Understanding **distributions** is foundational in statistics. A distribution describes **how values of a variable are spread or clustered**. It allows us to:
+
+- Predict outcomes
+- Understand randomness
+- Quantify uncertainty
+- Build models and perform hypothesis testing
+- Connect sample data to population behavior
+
+Real-world data is almost always **random**, and distributions help us **model** and **reason** about this randomness.
+
+---
+
+# Discrete Distributions
+
+### Dice Roll Example
+
+Let's consider a simple case: rolling a fair 6-sided die.
+
+```{r}
+# Set seed for reproducibility
+set.seed(1)
+sample(1:6, 1)  # Random roll
+```
+
+Each outcome (1 to 6) has equal probability:
+
+```{r}
+# Generate probabilities
+probability <- rep(1/6, 6)
+
+# Plot the probability distribution
+plot(probability,
+     xlab = "Outcomes",
+     ylab = "Probability",
+     main = "Probability Distribution of Dice Roll",
+     type = "h", lwd = 3)
+```
+
+---
+
+### Cumulative Distribution Function (CDF)
+
+The CDF shows cumulative probability up to a certain value.
+
+```{r}
+# Cumulative probabilities
+cum_probability <- cumsum(probability)
+
+# Plot the CDF
+plot(cum_probability,
+     xlab = "Outcomes",
+     ylab = "Cumulative Probability",
+     main = "Cumulative Distribution Function",
+     type = "s", lwd = 2)
+```
+
+---
+
+# Continuous Distributions
+
+### Normal Distribution
+
+The **Normal distribution** (bell curve) is fundamental in statistics. Many natural phenomena (heights, errors, test scores) follow it.
+
+```{r}
+x <- seq(-4, 4, length=100)
+y <- dnorm(x)
+
+plot(x, y, type="l", lwd=2, col="blue",
+     main="Probability Density Function - Normal Distribution",
+     xlab="x", ylab="Density")
+```
+
+### Cumulative Normal Distribution
+
+```{r}
+y_cdf <- pnorm(x)
+
+plot(x, y_cdf, type="l", lwd=2, col="darkgreen",
+     main="Cumulative Distribution Function - Normal Distribution",
+     xlab="x", ylab="Cumulative Probability")
+```
+
+---
+
+### Student Task
+
+> **Task:** Try changing the mean and standard deviation of the normal distribution using `dnorm(x, mean, sd)` and observe the changes.  
+> **Question:** What happens to the shape when you increase the standard deviation?
+
+---
+
+### Why Continuous Distributions Matter
+
+- Allow probability modeling of **non-integer** outcomes
+- Used to define models for **measurement variables**
+- Basis for **inference**: e.g., t-tests, confidence intervals rely on assumptions of normality
+
+---
+
+### Summary
+
+| Type        | Example          | Description                   |
+|-------------|------------------|-------------------------------|
+| Discrete    | Dice roll        | Finite countable outcomes     |
+| Continuous  | Normal, t, F     | Infinite possible values      |
+
+---
+
+# Skewness and Kurtosis
+
+Understanding **shape characteristics** of a distribution is just as important as knowing its center (mean) and spread (standard deviation). Two key shape measures are:
+
+---
+
+### Skewness
+
+Skewness measures the **asymmetry** of a distribution.
+
+- **Skewness = 0**: symmetric (e.g., normal distribution)
+- **Skewness > 0**: right-skewed (long tail to the right)
+- **Skewness < 0**: left-skewed (long tail to the left)
+
+### Formula (Sample Skewness):
+
+$$
+\text{Skewness} = \frac{1}{n} \sum \left(\frac{x_i - \bar{x}}{s}\right)^3
+$$
+
+Where:
+- $\bar{x}$ = sample mean
+- $s$ = sample standard deviation
+- $n$ = sample size
+
+---
+
+### Kurtosis
+
+Kurtosis measures the **tailedness** (peakedness) of a distribution.
+
+- **Kurtosis = 3**: normal (mesokurtic)
+- **Kurtosis > 3**: sharper peak (leptokurtic)
+- **Kurtosis < 3**: flatter peak (platykurtic)
+
+![](kurt.png)
+
+### Formula (Sample Kurtosis):
+
+$$
+\text{Kurtosis} = \frac{1}{n} \sum \left(\frac{x_i - \bar{x}}{s}\right)^4
+$$
+
+---
+
+### Calculating in R
+
+We'll use the `e1071` package to compute skewness and kurtosis for a normal distribution.
+
+```{r}
+#install.packages("e1071")
+library(e1071)
+
+# Generate a sample from the normal distribution
+set.seed(123)
+normal_sample <- rnorm(1000)
+
+# Skewness and Kurtosis
+skewness(normal_sample)
+kurtosis(normal_sample)
+
+hist(normal_sample, breaks = 200)
+```
+
+You can test other distributions like:
+```{r}
+# Right-skewed example
+right_skewed <- rexp(1000)
+skewness(right_skewed)
+kurtosis(right_skewed)
+
+hist(right_skewed, breaks = 200)
+```
+
+---
+
+### Why They Matter
+
+- Helps determine **which model or statistical test** is appropriate
+- Used in **assumption checking** (e.g., is the data approximately normal?)
+- Can indicate the **presence of outliers** or **asymmetry**
+
+
+---
+
+# Common Statistical Distributions
+
+In statistics, different **types of probability distributions** help us model and understand uncertainty in various situations. Each distribution has specific characteristics and use cases.
+
+---
+
+### Why Distributions Matter in Practice
+
+Understanding which distribution fits your data allows you to:
+
+- Choose the correct statistical test
+- Accurately estimate probabilities or risks
+- Understand variability and uncertainty in business decisions
+- Build confidence intervals and make predictions
+
+---
+
+### 1. Normal Distribution
+
+- **Shape**: Symmetric, bell-shaped
+- **Used For**: Modeling continuous outcomes (e.g., height, test scores, salary...)
+- **Key Features**:
+  - Defined by *mean* (center) and *standard deviation* (spread)
+  - Many natural processes follow this distribution (Central Limit Theorem)
+- **Why It Matters**: Many natural processes tend to form a bell-shaped curve.
+
+*Example*: Distribution of exam scores.
+
+```{r}
+x <- seq(-4, 4, 0.01)
+y <- dnorm(x)
+plot(x, y, main="Normal Distribution", ylab="Density")
+```
+```{r}
+a = rnorm(1000)
+hist(a, breaks = 50, main="Normal Distribution", ylab="Density")
+```
+
+---
+
+### 2. t-Distribution
+
+- **Shape**: Similar to normal but with heavier tails
+- **Used For**: Inference with small samples, especially mean comparisons and hypothesis testing.
+- **Key Features**:
+  - As sample size increases, it becomes more like the normal
+  - Used in one-sample or two-samples t-tests (e.g., compare average sales across two stores)
+- **Why It Matters**: Used in many real-life inference tasks
+- **Key Parameter**: Degrees of freedom (df)
+
+*Example*: Comparing average performance of two student groups with small sample sizes or one student group with the average performance of the class.
+
+```{r}
+curve(dt(x, df = 10), from = -4, to = 4, col = "red", lwd = 2, main = "t-Distribution")
+```
+
+ - In the curve shown with df = 10, the tails are tipically fatter than a normal distribution.
+ 
+ - As df increases, the t-distribution becomes indistinguishable from the normal distribution.
+
+---
+
+### 3. Chi-Square (χ²) Distribution
+
+- **Shape**: Skewed right, becomes symmetric as degrees of freedom increase
+- **Used For**: Testing **variances** and independence (e.g., customer preference across groups)
+- **Key Features**:
+  - Always positive (no negative values)
+- **When to Use**: Categorical data — test if groups are related or if observed counts match expected
+- **Key Parameter**: Degrees of freedom
+
+*Example*: Is customer preference independent of region? Do expected vs actual sales align?
+
+
+```{r}
+curve(dchisq(x, df=4), from=0, to=20, col="darkgreen", lwd=2, main="Chi-Square Distribution")
+```
+
+ - The curve is right-skewed, especially for small df values.
+ 
+ - As df increases, the curve becomes more symmetric, and the peak shifts to the right.
+ 
+ - The chi-square value on the x-axis increases with stronger deviation from expected values. A large chi-square → likely rejection of the null hypothesis.
+---
+
+### 4. F Distribution
+
+- **Shape**: Right-skewed
+**When to Use**: Comparing **variances** or testing differences across **multiple groups** (e.g., testing whether average productivity differs between departments)
+- **Key Features**:
+  - Built from two chi-squared distributions
+  - Common in **regression** and **ANOVA** models
+- **Why It Matters**: Basis for **ANOVA** and model comparisons
+- **Key Parameters**: Two degrees of freedom values (from the two chi-squared distributions)
+
+The F distribution has two degrees of freedom:
+
+- df1: numerator (between-group variance): number of groups − 1
+
+- df2: denominator (within-group variance); total sample size − number of groups
+
+ *Example*: Are average performance of students across 3 economics degree significantly different?
+
+```{r}
+curve(df(x, df1 = 5, df2 = 10), from=0, to=5, col="blue", lwd=2, main="F Distribution")
+```
+
+
+---
+
+### Tasks
+
+> **Task:** Use `dnorm()`, `dt()`, `dchisq()` to simulate values of your choice and plot the results.  
+
+
+---
+
+### 6. Bernoulli and Binomial Distributions
+
+These distributions are essential when modeling **yes/no**, **success/failure**, or **binary outcomes**.
+
+---
+
+### Bernoulli Distribution
+
+- **Definition**: A single trial with two possible outcomes (e.g., success/failure).
+- **Values**: 0 (failure) or 1 (success)
+- **Parameter**: $p$ = probability of success
+- **Used For**: Modeling binary events (e.g., Did a customer convert? Yes/No)
+
+*Example*: Did a customer buy or not? (conversion = 1, no conversion = 0)
+
+```{r}
+# Simulate 100 Bernoulli trials (p = 0.3)
+set.seed(42)
+# Simulate 100 Bernoulli trials with success probability = 0.3
+# rbinom() generates random values from a binomial distribution
+# Setting size = 1 turns it into a Bernoulli trial (i.e., one trial per draw: success = 1, failure = 0)
+bernoulli_trials <- rbinom(100, size = 1, prob = 0.3)
+
+# Count the number of 0s (failures) and 1s (successes)
+# This gives a simple frequency table showing how many successes and failures occurred
+table(bernoulli_trials)
+```
+
+---
+
+### Binomial Distribution
+
+- **Definition**: Sum of multiple Bernoulli trials
+- **Values**: Discrete, from 0 to n (number of successes)
+- **Used For**: Number of successes in a fixed number of independent trials (e.g., how many sales calls out of 20 result in a sale)
+
+```{r}
+# Probability distribution for 0 to 10 successes, with 10 trials and p = 0.5
+x <- 0:10  # These are all the possible outcomes in 10 trials
+
+# Calculate the probability of each outcome using the binomial distribution
+# dbinom() returns the probability of getting exactly x successes in a fixed number of trials
+# Parameters: size = 10 trials, prob = 0.5 probability of success in each trial
+y <- dbinom(x, size = 10, prob = 0.5)
+
+# Create a bar plot to visualize the binomial probability distribution
+barplot(y,
+        names.arg = x,        # Label each bar with the number of successes
+        col = "skyblue",      # Set bar color
+        main = "Binomial Distribution (n=10, p=0.5)",  # Title of the plot
+        xlab = "Number of Successes",                 # Label x-axis
+        ylab = "Probability")                         # Label y-axis
+```
+
+---
+
+### Key Characteristics
+
+| Feature      | Bernoulli            | Binomial                        |
+|--------------|----------------------|---------------------------------|
+| Type         | Single trial         | Repeated trials (n times)       |
+| Output       | 0 or 1               | Integer from 0 to n             |
+| Applications | Conversion, dropout  | Customer purchases out of 10 trials |
+
+---
+
+### Student Challenge
+
+> **Task:** Use `rbinom(1000, size = 5, prob = 0.2)` to simulate outcomes.  
+> **Question:** How does increasing `p` or `n` change the shape of the distribution?
+
+---
+
+
+### Summary: Which Distribution for What?
+
+| Goal                                | Use This Distribution |
+|-------------------------------------|------------------------|
+| Model measurement data (e.g., time, scores) | Normal |
+| Compare group means (small samples) | t-Distribution |
+| Test categorical independence       | Chi-Square |
+| Compare variance or group means     | F Distribution |
+| Simulate yes/no outcome             | Bernoulli |
+| Count successes over trials         | Binomial |
+
+---
+
+Distributions are **not just math** — they are **models of reality**. Choosing the right one helps you extract the **most meaning** from data and guides **correct decisions** in the face of uncertainty.
+
+---
+
+# Statistical Inference
+
+Statistical inference is about making **conclusions about a population** using data from a sample. Because we rarely have access to an entire population, we use probability theory to make estimates and test hypotheses based on **sample data**.
+
+---
+
+# Confidence Intervals (CI)
+
+A **confidence interval** gives a range of plausible values for a population parameter (usually the mean). It tells us:  
+> “We are X% confident that the population mean lies between these two values.”
+
+To compute a **95% confidence interval** for the population mean $\mu$, we use the formula:
+
+$$
+CI = \bar{x} \pm t^* \cdot \left(\frac{s}{\sqrt{n}}\right)
+$$
+
+Where:
+- $\bar{x}$ = sample mean  
+- $s$ = sample standard deviation  
+- $n$ = sample size  
+- $t^*$ = critical value from the t-distribution with $n-1$ degrees of freedom
+
+This range contains the true population mean with **95% confidence**.
+
+```{r}
+# Generate a random sample of 30 values from a normal distribution with mean 70 and standard deviation 10
+sample_data <- rnorm(30, mean = 70, sd = 10)
+
+# Compute the sample mean (point estimate of population mean)
+mean_val <- mean(sample_data)
+
+# Calculate the standard error of the mean (SE = s / sqrt(n))
+# This tells us how much the sample mean is expected to vary
+se <- sd(sample_data) / sqrt(length(sample_data))
+
+# Find the critical t-value for a 95% confidence level
+# qt(0.975, df) gives the cutoff for the upper 2.5% of the t-distribution (two-tailed: 2.5% in each tail)
+t_critical <- qt(0.975, df = length(sample_data) - 1)
+
+# Compute the lower bound of the confidence interval
+ci_low <- mean_val - t_critical * se
+
+# Compute the upper bound of the confidence interval
+ci_high <- mean_val + t_critical * se
+
+# Output the results: the sample mean and the 95% confidence interval
+c(mean = mean_val, CI_low = ci_low, CI_high = ci_high)
+```
+
+---
+
+### Why Confidence Intervals Matter
+
+They provide:
+- A range of **credible values** for a population mean
+- An intuitive understanding of **estimation uncertainty**
+- Better information than just a single point estimate
+
+---
+
+### One-Sample t-Test
+
+Used when you want to **test whether the sample mean differs from a known/hypothesized value**
+
+Let:
+- $x$ = sample mean  
+- $s$ = sample standard deviation  
+- $n$ = sample size  
+- $\mu_0$ = null hypothesis mean
+
+Formula:
+
+$$
+t = \frac{\bar{x} - \mu_0}{s / \sqrt{n}}
+$$
+
+Let's try it with random data and check for a random mean (e.g., 70).
+
+```{r}
+t.test(sample_data, mu = 70)
+```
+
+- **Null Hypothesis (H0):** The population mean is 70
+- **Alternative Hypothesis (H1):** The population mean is not 70
+
+---
+
+### Two-Sample t-Test
+
+Test whether **two independent groups** have different means.
+
+Assuming **equal variances**:
+
+$$
+t = \frac{\bar{x}_1 - \bar{x}_2}{s_p \cdot \sqrt{\frac{1}{n_1} + \frac{1}{n_2}}}
+$$
+Where:
+
+$$
+s_p = \sqrt{\frac{(n_1-1)s_1^2 + (n_2-1)s_2^2}{n_1 + n_2 - 2}}
+$$
+
+```{r}
+group1 <- rnorm(30, mean = 72, sd = 10)
+group2 <- rnorm(30, mean = 68, sd = 10)
+
+t.test(group1, group2, var.equal = TRUE)
+```
+
+This is common in business when comparing average outcomes (e.g., sales) between two groups.
+
+---
+
+
+### Understanding p-Values
+
+The **p-value** is the probability of observing a result at least as extreme as the one you found, assuming the null hypothesis is true.
+
+- **p < 0.05** → typically considered **statistically significant**
+- **Small p-value** = strong evidence against the null
+
+Understanding the p-value visually helps demystify hypothesis testing.
+
+Let’s simulate a t-test and show the area under the curve representing the p-value.
+
+```{r}
+# Simulate data: 30 observations from a normal distribution with mean 72 and sd 10
+set.seed(42)  # Ensures reproducibility
+sample_data <- rnorm(30, mean = 72, sd = 10)  # Generate random sample
+
+# Set the null hypothesis value (mu_0) we want to test the sample against
+mu_0 <- 70  # Hypothesized population mean
+
+# Compute the t-statistic manually
+# Formula: t = (sample mean - hypothesized mean) / (standard error)
+t_stat <- (mean(sample_data) - mu_0) / (sd(sample_data) / sqrt(length(sample_data)))
+
+# Degrees of freedom for a one-sample t-test is n - 1
+df <- length(sample_data) - 1
+
+# Calculate two-tailed p-value from t-distribution
+# pt() gives cumulative probability; 2* because we are interested in both tails
+p_val <- 2 * pt(-abs(t_stat), df)
+
+# Define the x-axis for the plot: a sequence of values from -4 to 4
+x <- seq(-4, 4, length = 1000)
+
+# Get the corresponding y values for the t-distribution PDF
+y <- dt(x, df = df)  # dt = density of the t-distribution
+
+# Create the plot of the t-distribution
+plot(x, y, lwd = 1, main = "Two-Tailed t-Test: p-Value Visualization")  # Line plot
+
+# Draw vertical lines at the positive and negative t-stat values
+abline(v = c(-abs(t_stat), abs(t_stat)), col = "red", lty = 2)
+
+# Shade the left tail area (t < -|t_stat|) to visualize part of the p-value
+polygon(c(x[x <= -abs(t_stat)], -abs(t_stat)), 
+        c(y[x <= -abs(t_stat)], 0), col = "pink", border = NA)
+
+# Shade the right tail area (t > |t_stat|) to complete the two-tailed p-value
+polygon(c(x[x >= abs(t_stat)], abs(t_stat)), 
+        c(y[x >= abs(t_stat)], 0), col = "pink", border = NA)
+```
+
+---
+
+### Analysis of Variance (ANOVA)
+
+Used when comparing **more than two group means**.
+
+Between-group variance vs. within-group variance:
+
+$$
+F = \frac{\text{Between-group variance}}{\text{Within-group variance}}
+$$
+
+Large $F$ values → group means are likely different.
+
+```{r}
+group_a <- rnorm(30, mean = 65, sd = 5)
+group_b <- rnorm(30, mean = 70, sd = 5)
+group_c <- rnorm(30, mean = 75, sd = 5)
+
+data <- data.frame(
+  score = c(group_a, group_b, group_c),
+  group = factor(rep(c("A", "B", "C"), each = 30))
+)
+
+anova_result <- aov(score ~ group, data = data)
+summary(anova_result)
+```
+Here’s what each column means:
+
+ - Df (Degrees of Freedom):
+ 
+ - group: Number of groups minus 1 (k − 1)
+ 
+ - residuals: Total observations minus number of groups (n − k)
+ 
+ - Sum Sq (Sum of Squares): Measures total variability in the data: group (Between-group variability), residuals (Within-group (unexplained) variability)
+ 
+ - Mean Sq (Mean Square): Sum of Squares divided by their respective degrees of freedom.
+It represents the average variability.
+
+ - F value: Ratio of between-group variance to within-group variance. A higher F suggests stronger evidence that at least one group mean differs.
+
+ - Pr(>F) (p-value): Probability that the observed F-statistic (or larger) would occur if all group means were equal.
+
+If p < 0.05, we typically reject the null hypothesis and conclude at least one group mean is significantly different.
+
+---
+
+### Visualizing ANOVA Groups
+
+```{r}
+boxplot(score ~ group, data = data,
+        col = c("skyblue", "lightgreen", "lightpink"),
+        main = "Group Score Comparison",
+        ylab = "Score")
+```
+
+Inference allows us to **generalize from data**, but only under certain conditions:
+
+- The data should be **randomly sampled**
+
+- The model assumptions (e.g., normality, equal variance) should be roughly met
+
+- **Significant** does not always mean **practically important**
+
+---
+
+### Tasks
+
+> **Task 1**: Simulate two groups with the same mean and run a t-test. What do you expect the p-value to be?  
+
+> **Task 2**: Increase the sample size to 100. How does that affect your CI width and t-test results?  
+
+> **Task 3**: Modify group means and test if ANOVA results change.
+
+
+
+

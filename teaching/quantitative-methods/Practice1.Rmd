@@ -1,0 +1,1591 @@
+---
+title: "Practice 1 - Introduction to R"
+author: "Lorenzo Rossi"
+date: "2025-04-10"
+output:
+  pdf_document: 
+      latex_engine: xelatex
+  html_document: default
+---
+
+### Who Am I
+
+- Ph.D. Candidate in Economics at Univerity of Milan and University of Pavia.
+- Research field(s): Econometrics, Time Series Forecasting and Machine Learning.
+- MSc in Data Science and Economics and BA in International Sciences and European Institutions (both at University of Milan)
+- Contacts: lorenzo.rossi1@unimi.it
+- Website (I'll upload materials here too): https://lorenzrossi.github.io 
+
+# Why R and RStudio
+
+R is an integrated suite of software facilities for data manipulation, calculation, and graphical display.  
+RStudio is an IDE (Integrated Development Environment) for R that makes using R easier and more efficient.
+
+## Features of R
+
+- It is a comprehensive programming language that provides support for procedural programming
+involving functions as well as object-oriented programming with generic functions.
+- R is free and open source, powerful, flexible, and relevant beyond the introductory statistics classroom.
+- There are more than 10, 000 packages in the repository of R programming. With these packages, one
+can make use of functions to facilitate easier programming.
+- With R, you can perform statistical analysis, data analysis as well as machine learning.  
+- We can create objects, functions, packages and app in it.
+- R is platform-independent and can be used across multiple operating systems.
+- Great for working with tabular data and visualizations.
+- R has extensive community support that provides technical assistance and seminars to get you started with R.
+
+# Install
+
+Install R:  
+<https://cran.r-project.org>
+
+Install RStudio:  
+<https://posit.co/download/rstudio-desktop/>
+
+# RStudio Interface Overview
+
+RStudio is divided into four main panels:
+
+![](rstudio-panes-labeled.jpeg)
+
+1. **Source (Top-Left)**: Where you write and edit R scripts or R Markdown files.
+2. **Console (Bottom-Left)**: Where you directly type and run R commands.
+3. **Environment/History (Top-Right)**: View loaded variables and previous commands.
+4. **Files/Plots/Packages/Help/Viewer (Bottom-Right)**: File browser, plot viewer, installed packages, and help documentation.
+
+Each panel can be resized or customized to suit your workflow.
+
+### R Syntax Features
+
+- **Case Sensitivity**: R is case sensitive. `a` and `A` refer to different variables.
+- **Variable Naming**: Variable names can include letters, numbers, `.` and `_`.
+- **Comments**: Use `#` to write comments.
+- **Running External Scripts**: If you store commands in an external file, e.g., `commands.R`, you can run them using:
+
+```{r}
+# source("commands.R")
+```
+
+- **Function Help**: To get help about a function, use:
+```{r}
+help(fun)
+?fun
+??fun  # if the function is in an unloaded package
+```
+
+- **File Paths**:
+  - **Windows**: `"c:/docs/mydir"` or `"c:\\docs\\mydir"`
+  - **Mac/Linux**: `"/Users/yourname/Documents/mydir"`
+
+- **Using Packages**:
+  - Install once: `install.packages("package")`
+  - Load into session: `library("package")`
+
+# Working Directory
+
+To print the current working directory:
+
+```{r}
+getwd()
+```
+
+To change the working directory:
+
+```{r}
+# setwd(mydirectory)     # change to mydirectory
+# setwd("c:/docs/mydir") # Windows
+# setwd("/Users/yourname/Documents") # Mac
+```
+
+(You can also change it from the RStudio menu)
+
+# Assign Values
+
+The following are all valid ways to assign a value to a variable:
+
+```{r}
+a <- 3
+# or
+a = 3
+# or
+3 -> a
+```
+
+To print the value:
+
+```{r}
+a
+print(a)
+```
+
+# Assign Values 2
+
+If you just enter a value without assigning it to a variable, the value is printed but not stored:
+
+```{r}
+3
+```
+
+### Tasks:
+- Assign to `x` the value 4  
+- Assign to `y` the same value in `x`  
+- Assign to `z` the letter `x`
+
+```{r}
+x <- 4
+y <- x
+z <- "x"
+x; y; z
+```
+
+# Objects in R
+
+R creates and manipulates **objects**. These can include:
+
+- Variables (scalar)
+- Vectors
+- Arrays
+- Lists
+- Data frames
+- Environments
+- Functions
+- Packages
+
+To list all stored objects in the current workspace:
+
+```{r}
+ls()
+```
+
+# Types of Objects
+
+Objects in R can store elements of these **types**:
+
+- Numeric
+- Complex
+- Character string
+- Logical
+
+Variables, vectors, and arrays are **atomic** objects (all elements same type). 
+
+There are also **special values**:
+
+- `NA` (missing value)
+- `NaN` (not a number)
+- `NULL` (undefined object)
+
+# Object Manipulation
+
+Use `rm()` to remove objects from the workspace:
+
+```{r}
+x <- 3
+ls()
+rm(x)
+ls()
+```
+
+### Task:
+Define two objects and remove them using `rm()`.
+
+# Vectors
+
+R operates on **data structures**. The simplest is the **numeric vector**: a collection of numbers.
+They are defined with the `c()` function:
+
+```{r}
+x <- c(1, 3, 2.5, 7, 8.233212, 10)
+x
+```
+
+**Ordered**: each element has a position. Use `[]` to access elements by position:
+
+```{r}
+x[1]
+x[2]
+```
+
+### Tasks:
+- Create object `y` containing `x` repeated twice
+- Select the 3rd element of `y`
+
+```{r}
+y <- rep(x, 2)
+y[3]
+```
+
+### Vector Arithmetic
+
+Basic operations (`+`, `-`, `*`, `/`, `^`) apply element-wise.
+Vectors recycle automatically if not the same length:
+
+```{r}
+x <- c(2, 3, 4, 7, 8, 7, 3)
+y <- c(4, 8)
+v <- 2 * x + y + 1
+v
+```
+
+### Vector Arithmetic Part 2
+
+R supports many vectorized mathematical functions:
+
+- `log(x)`, `exp(x)`, `sin(x)`, `cos(x)`, `tan(x)`, `sqrt(x)`
+- `max(x)`, `min(x)` – largest/smallest value
+- `range(x)` – returns `c(min(x), max(x))`
+- `length(x)` – number of elements
+- `sum(x)` – total
+- `prod(x)` – product of elements
+
+### Tasks:
+- Put in vector `x` the first 5 even numbers
+- Compute the mean and store in `bar.x`
+- Compute the variance and store in `sigma2.x`
+
+```{r}
+x <- c(2, 4, 6, 8, 10)
+bar.x <- mean(x)
+sigma2.x <- var(x)
+bar.x
+sigma2.x
+```
+
+### Vector Functions Summary Table
+
+| Function      | Description                            |
+|---------------|----------------------------------------|
+| `length(x)`   | Number of elements in x                |
+| `sum(x)`      | Sum of all elements                    |
+| `prod(x)`     | Product of all elements                |
+| `mean(x)`     | Arithmetic mean                        |
+| `var(x)`      | Sample variance                        |
+| `range(x)`    | Min and max as a vector                |
+| `min(x)`      | Minimum value                          |
+| `max(x)`      | Maximum value                          |
+| `log(x)`      | Natural logarithm of x                 |
+| `sqrt(x)`     | Square root of each element            |
+
+### Task
+
+Write a script that:
+
+1. Creates a vector `grades <- c(22, 27, 19, 30, 25)`
+2. Computes:
+    - mean, min, max
+    - standard deviation (`sd()`)
+3. Stores all results in a named vector `summary_grades`
+
+```{r}
+grades <- c(22, 27, 19, 30, 25)
+mean_val <- mean(grades)
+min_val <- min(grades)
+max_val <- max(grades)
+sd_val <- sd(grades)
+above_mean <- sum(grades > mean_val)
+
+summary_grades <- c(mean_val,min_val,max_val,sd_val)
+
+summary_grades
+```
+
+# Logical Vectors
+
+A **logical vector** can contain values `TRUE`, `FALSE`, or `NA`. `T` and `F` are shorthand for `TRUE` and `FALSE`.
+
+```{r}
+y <- c(3, 2, 6, 1, 8, 2)
+x <- y > 4
+x
+!x
+```
+
+Compare values in `y` using logical operators:
+
+```{r}
+y == 4
+y <= 4
+y != 6
+```
+
+`TRUE` is treated as 1, and `FALSE` as 0:
+
+```{r}
+sum(x)  # counts TRUE values
+```
+
+Use `which()` to get the **positions** of TRUE values instead of the values themselves:
+
+```{r}
+which(x)
+```
+
+### Task:
+- Define a logical vector with two `FALSE` and three `TRUE` values
+
+```{r}
+logical_vec <- c(FALSE, FALSE, TRUE, TRUE, TRUE)
+logical_vec
+```
+
+# Logical Operations
+
+Use these operators for element-wise comparisons:
+- `<`, `>`, `<=`, `>=`, `==`, `!=`
+- `&` = AND, `|` = OR, `!` = NOT (element-wise)
+- Extra: `&&`, `||` = AND/OR for the first element only
+
+```{r}
+(y > 3) | (y <= 8)      # element-wise OR
+(y > 3) & (y <= 8)      # element-wise AND
+```
+
+### Task:
+- Use `y` to check which elements are equal to 3 **or** less than or equal to 7
+
+```{r}
+y == 3 | y <= 7
+```
+
+# Logical Vectors for Selecting Elements
+
+Logical vectors can be used to filter elements:
+
+```{r}
+x <- c(0.01, 0.2, 0.5, 0.09)
+ind <- x < 0.1
+ind
+x[ind]
+```
+
+To get the **indexes** of selected elements instead of the values, use:
+
+```{r}
+which(ind)
+```
+
+### Grades Filtering Task
+Given a vector of grades:
+
+```{r}
+grades <- c(18, 22, 28, 19, 30, 24, 17)
+```
+
+- Select the grades that are **greater than or equal to 26**
+- Count how many students passed with **at least 18**
+- Filter and show grades between **20 and 28** (inclusive)
+- Find the **positions** of grades equal to 30 using `which()`
+
+```{r}
+grades[grades >= 26]
+sum(grades >= 18)
+grades[grades >= 20 & grades <= 28]
+which(grades == 30)
+```
+
+# Missing Values in R
+
+## The Missing Value: `NA`
+
+- `NA` stands for a “not available” or “missing” value.
+- Use `is.na(x)` to test which elements are missing.
+
+```{r}
+x <- c(2, 5, NA, 4, 2)
+is.na(x)
+sum(is.na(x))
+```
+
+Trying to compare to `NA` with `==` is not valid:
+
+```{r}
+x == NA  # incorrect
+```
+
+Use `is.na()` instead for safe comparison.
+
+### Summary Statistics with NAs
+By default, many functions return `NA` if any input is `NA`. Use `na.rm = TRUE` to exclude missing values:
+
+```{r}
+mean(v)                # returns NA
+mean(v, na.rm = TRUE)  # skips NA
+sum(v, na.rm = TRUE)
+max(v, na.rm = TRUE)
+```
+
+## The Missing Value: `NaN`
+
+- `NaN` stands for “Not a Number”
+- Caused by undefined operations like `0/0` or `Inf - Inf`
+
+```{r}
+0/0
+Inf - Inf
+```
+
+### Summary:
+- `is.na(xx)` is `TRUE` for both `NA` and `NaN`
+- Use `is.nan(xx)` to test only for `NaN`
+
+### The Missing Value: `NULL`
+
+- `NULL` represents an undefined object, not an element inside a vector
+- It is removed when combining with `c()`
+
+```{r}
+c(1, 2, NULL, 3)
+```
+
+Check type of each missing value type:
+
+```{r}
+class(NA)
+class(NULL)
+```
+
+### Comparison Table of Missing Values
+
+| Type  | Description              | Class    | Test Function   | Example Result   |
+|-------|--------------------------|----------|------------------|------------------|
+| `NA`  | Missing value            | logical  | `is.na(x)`       | `TRUE` if `x=NA` |
+| `NaN` | Not a number (undefined) | numeric  | `is.nan(x)`      | `TRUE` if `x=NaN`|
+| `NULL`| Empty/undefined object   | NULL     | `is.null(x)`     | `TRUE` if `x=NULL`|
+
+# Character Vectors (String Manipulation)
+
+### Combine Strings with `paste()`
+
+```{r}
+xx <- 1:10
+labs <- paste(c("X", "Y"), xx, sep = "")
+labs
+paste("Hello", "World", sep = "+")
+```
+
+### Combine with `assign()` to Create Dynamic Variable Names
+
+```{r}
+var1 <- paste("X", 1, sep = "")
+var1
+class(var1)
+assign(var1, 3)
+var1
+X1  # access the variable created by assign()
+```
+
+# Character Vectors (Part 2)
+
+### Length of a String
+
+```{r}
+nchar("Hello world!")
+```
+
+### Format Strings with `sprintf()`
+
+`sprintf()` formats strings using C-style placeholders:
+- `%s` is for string
+- `%f` is for floating point (decimal)
+- `%.2f` means 2 decimal places
+
+```{r}
+sprintf("%s scored %.2f percent", "Matthew", 72.3)
+```
+
+### Task:
+Given the following students and scores:
+
+```{r}
+names <- c("Al", "John", "Jack")
+scores <- c(25.5, 30.0, 28.3)
+```
+
+Use `sprintf()` to format their results like:
+- `"Al scored 25.50 points"`
+
+```{r}
+sprintf("%s scored %.2f points", names, scores)
+```
+
+### Extract Substrings with `substr()`
+
+```{r}
+num <- "87654321"
+substr(num, 4, 5)
+substr(num, 5, 7)
+```
+
+### Split Strings with `strsplit()`
+
+```{r}
+str <- "Splitting sentence into words"
+strsplit(str, " ")
+```
+
+# Indexing Vectors: Selecting and Modifying Subsets of a Vector (Part 1)
+
+You can index vectors using:
+
+### Logical Vectors
+
+```{r}
+x <- 10:20
+x[x > 16]     # elements greater than 16
+x[!x > 16]    # elements NOT greater than 16
+```
+
+### Positive Integer Indices
+
+```{r}
+ind <- c(1, 5, 2, 6, 1)
+x[ind]       # select by position
+```
+
+### Negative Indices (Exclude Elements)
+
+```{r}
+x <- 10:20
+ind <- c(1, 5, 2, 6)
+x[-ind]      # exclude positions
+```
+
+# Indexing Vectors (Part 2)
+
+### Character String Indices
+Use `names()` to label vector elements and select by name.
+
+```{r}
+fruit <- c(5, 10, 1, 20)
+names(fruit) <- c("orange", "banana", "apple", "peach")
+lunch <- fruit[c("apple", "orange")]
+lunch
+```
+
+### Replace Vector Elements
+
+```{r}
+x <- c(1, 4, 2, 5, 3)
+x[c(1, 2)] <- c(7, 7)
+x
+```
+
+### Task
+
+- Remove all `NA` and `NaN` values from a vector
+- Build a named vector of 5 elements and select the third element using all four types of indices
+
+```{r}
+x <- c(1, 2, NA, 7.9, NA, 3, 9, NaN)
+x_clean <- x[!is.na(x) & !is.nan(x)]
+x_clean
+
+named_vec <- c(a = 10, b = 20, c = 30, d = 40, e = 50)
+named_vec[3]          # positive index
+named_vec["c"]        # name index
+named_vec[c(FALSE, FALSE, TRUE, FALSE, FALSE)]  # logical
+named_vec[-c(1, 2, 4, 5)]  # negative to isolate one
+```
+
+### Recap Exercise
+Given this vector:
+
+```{r}
+stats <- c(mean = 18.5, median = 19, mode = 20, sd = 3.2, var = 10.1)
+```
+
+Do the following using each of the four indexing types:
+
+- Retrieve the 4th value
+- Retrieve "sd" by name
+- Retrieve only "sd" using logical indexing
+- Exclude all except the 4th value using negative indexing
+
+```{r}
+stats[4]                  # positive
+stats["sd"]              # by name
+stats[c(FALSE, FALSE, FALSE, TRUE, FALSE)]  # logical
+stats[-c(1, 2, 3, 5)]     # negative
+```
+
+# Objects, Their Modes and Length
+
+Atomic structure modes in R include:
+- `numeric` (integer/double)
+- `complex`
+- `logical`
+- `character`
+
+```{r}
+character(0)
+numeric(0)
+```
+
+Vectors can be empty and still have a defined mode.
+
+Lists and data frames are mode `list` (they can contain mixed modes). Other recursive modes include `function`, `expression`, and `environment`.
+
+### Intrinsic Attributes: Mode and Length
+
+`mode()` returns the basic storage type of an object. `length()` gives the number of elements:
+
+```{r}
+x <- c(1, 3, 2, 4)
+a <- c("1", "3", "2", "4")
+mode(x)
+mode(a)
+length(x)
+length(a)
+```
+
+### Changing Intrinsic Attributes
+
+Change the Mode
+
+```{r}
+mode(x)
+mode(as.character(x))
+mode(a)
+mode(as.numeric(a))
+```
+
+Change the Length
+
+```{r}
+x <- numeric()
+x
+x[2] <- 3
+x
+x <- c(x, c(3, 4))
+x
+length(x) <- 8
+x
+```
+
+### The `class` Attribute
+
+All objects have a `class`. Simple vectors share their `mode` and `class`, but structured objects differ:
+
+```{r}
+X <- matrix(c(1, 3, 2, 1), nrow = 2)
+class(X)
+mode(X)
+```
+
+Generic functions like `summary()` use `class` to determine behavior.
+
+### Ordered and Unordered Factors
+
+A `factor` encodes categorical or ordinal values:
+
+```{r}
+a <- c("a", "b", "c", "d", "a", "b", "a", "d")
+mode(a)
+class(a)
+
+x <- factor(a)
+x
+class(x)
+mode(x)
+levels(x)
+```
+
+### Comparison: `mode()`, `class()`, `typeof()`
+
+| Function     | Returns                 | Best Use                            |
+|--------------|--------------------------|-------------------------------------|
+| `mode(x)`    | Basic type (e.g. "numeric") | General type: numeric, list, etc.   |
+| `class(x)`   | Object class (e.g. "factor") | Generic behavior (S3/S4 class)     |
+| `typeof(x)`  | Low-level type (e.g. "double") | Internal representation           |
+
+```{r}
+typeof(x)
+```
+
+### Task: Explore and Convert Attributes
+
+- Create a named numeric vector of 4 elements
+- Check `mode()`, `class()`, and `typeof()`
+- Convert to character and check again
+- Extend vector length and examine behavior
+
+```{r}
+y <- c(a = 10, b = 20, c = 30, d = 40)
+mode(y)
+class(y)
+typeof(y)
+
+y_char <- as.character(y)
+mode(y_char)
+class(y_char)
+typeof(y_char)
+
+length(y_char) <- 6
+y_char
+```
+
+### Factors: Changing Values and Converting Types
+
+To change factor values, it is easiest to modify their **levels**:
+
+```{r}
+levels(x) <- c("1", "2", "3", "4")
+x
+class(x)
+```
+
+### Converting Factors to Numeric
+
+**Wrong way:** Direct conversion yields internal integer encoding of levels:
+
+```{r}
+as.numeric(x)  # wrong
+```
+
+**Correct way:** Convert to character first, then numeric:
+
+```{r}
+as.numeric(as.character(x))
+```
+
+# Arrays and Matrices
+
+You can image vectors, matrices and arrays like this
+
+![](data-array.png)
+
+An array is a multi-dimensional collection of data:
+
+```{r}
+Y <- array(1:20, dim = c(4, 5))
+Y
+class(Y)
+```
+
+A higher-dimensional array:
+
+```{r}
+Z <- array(1:6, dim = c(2, 2, 2))
+Z
+```
+
+### Matrix Creation
+
+```{r}
+X <- matrix(c(1, 2, 3, 4, 3, 2, 1, 5), nrow = 4, byrow = TRUE)
+X
+dim(X)
+length(X)
+class(X)
+```
+
+### Task
+- Build a 4-column matrix, each column filled with values from 3 to 7
+- Remove the last column
+
+```{r}
+M <- matrix(rep(3:7, 4), ncol = 4)
+M
+M_trimmed <- M[, -4]
+M_trimmed
+```
+
+### Accessing Matrix Elements
+
+```{r}
+X[c(1, 2), ]
+X[, 2]
+X[2, 1]
+```
+
+### Add Columns and Rows
+
+```{r}
+X <- cbind(X, c(1, 2, 3, 4))
+X <- rbind(X, c(7, 6, 5))
+X
+dim(X)
+```
+
+### Transpose
+
+```{r}
+t(X)
+```
+
+### Matrix Practice Task
+- Create a 5x3 matrix with values from 1 to 15
+- Transpose the matrix
+
+```{r}
+M <- matrix(1:15, nrow = 5, byrow = TRUE)
+M
+M_t <- t(M)
+M_t
+```
+
+### Structure Comparison Task
+- Create a numeric vector `v <- 1:9`
+- Convert `v` into a 3x3 matrix
+- Convert `v` into a 3x3x1 array
+- Use `class()` and `dim()` on all three
+
+```{r}
+v <- c(1:9)
+
+v_matrix <- matrix(v, nrow = 3)
+v_array <- array(v, dim = c(3, 3, 1))
+
+class(v)
+class(v_matrix)
+class(v_array)
+
+dim(v_matrix)
+dim(v_array)
+```
+
+### Summary Table: Data Structure Comparison
+
+| Structure | Dimensions | Homogeneous | Indexing          | Example Function |
+|-----------|------------|-------------|-------------------|------------------|
+| Vector    | 1D         | ✅ Yes      | `x[1]`            | `c()`.           |      
+| Matrix    | 2D         | ✅ Yes      | `x[1,2]`          | `matrix()`       |
+| Array     | ≥2D        | ✅ Yes      | `x[1,2,3]`        | `array()`        |
+
+
+# Lists, Data Frames, and Environments
+
+- **list**: can contain mixed types, different lengths/dimensions, and each slot can be named.
+- **data.frame**: like lists but with equal-length vectors only.
+- **environment**: pairs of symbol/value, not indexable by number, passed by reference.
+
+### List Example
+
+```{r}
+Lst <- list(name = "Fred", wife = "Mary", no.children = 3, child.ages = c(4, 7, 9))
+Lst
+```
+
+### Add/Remove Items
+
+```{r}
+Lst$z <- c("a", "b", "c")
+Lst
+Lst$z <- NULL
+Lst
+```
+
+### Selecting List Elements
+
+```{r}
+Lst[[1]]
+Lst["name"]
+Lst[1]
+Lst[["child.ages"]][2]
+Lst$no.children
+```
+
+# Data Frame
+
+A `data.frame` is a list of vectors with equal lengths and mixed types:
+
+```{r}
+a <- factor(c("1", "2", "3", "4"))
+b <- c("a", "b", "c", "d")
+x <- c(23, 43, 12, NA)
+data <- data.frame(col1 = a, col2 = b, col3 = x)
+data
+```
+
+Accessing columns:
+
+```{r}
+data$col2
+```
+
+### Modifying Data Frame
+
+Add a variable:
+
+```{r}
+data$new <- 1:4
+data
+```
+
+Delete a variable:
+
+```{r}
+data$new <- NULL
+data
+```
+
+Select columns:
+
+```{r}
+data <- subset(data, select = c(col1, col3))
+data
+```
+
+Filter rows:
+
+```{r}
+data <- subset(data, subset = c(!is.na(col3)))
+data
+```
+
+### Task
+Use dataset `cars`. Select rows where:
+- `speed < 6`
+- `dist < 15`
+
+```{r}
+data(cars)
+subset(cars, speed < 6 & dist < 15)
+```
+
+### Sorting Data Frames
+
+```{r}
+data(cars)
+head(sort(cars$speed))
+head(order(cars$speed))
+head(sort(cars$speed, decreasing = TRUE))
+head(order(cars$speed, decreasing = TRUE))
+
+head(cars[order(cars$dist), ])
+```
+
+### Merging Data Frames
+
+Vertical merge (same columns):
+
+```{r}
+data1 <- data.frame(a = c(1:3), b = letters[1:3])
+data2 <- data.frame(a = c(3, 2), b = letters[2:1])
+rbind(data1, data2)
+```
+
+Horizontal merge (same rows):
+
+```{r}
+data1 <- data.frame(a = c(1:3), b = letters[1:3])
+data2 <- data.frame(d = c(1:3), e = letters[3:5])
+cbind(data1, data2)
+```
+
+Relational join (general case):
+
+```{r}
+data1 <- data.frame(a = c(1:3), b = letters[1:3])
+data2 <- data.frame(a = c(3, 2, 4), b = letters[3:5])
+
+merge(data1, data2, by = "a")
+merge(data1, data2, by = c("a", "b"))
+merge(data1, data2, by = c("a", "b"), all = TRUE)
+```
+### Further Functionality
+
+Additional arguments for data import customization:
+
+- `header = FALSE` — use if variables have no names
+- `dec = "."` — define decimal symbol
+- `na.strings = "NA"` — strings to interpret as NA
+- `nrows` — max rows to read
+
+RStudio provides a GUI for data import.
+To read files from external software, use:
+
+- `xlsx` or `csv` for Excel
+- `sas7bdat` for SAS
+- `haven` for SPSS
+- `R.matlab` for MatLab
+
+### Exporting a data.frame
+
+Use `write_file()` to save data, based on delimiter type:
+
+- Comma-separated:
+
+```{r}
+# write_file(x = "a,b,c\n1,2,3\n4,5,NA", path = "file.csv")
+```
+
+
+### Import Data Frame
+
+```{r}
+# read.csv() for comma separated
+# read.csv2() for semicolon separated
+# read_delim() from readr with custom delimiters
+```
+
+E.g. 
+
+```{r}
+# your_df <- read.csv("yourdataset.csv")
+# View(netflix_titles)
+```
+
+You can also import a DataFrame from your environment panel
+
+![](import-dataset.png)
+
+### Import a Public Data Frame
+
+There are datasets which are "ready-made" and public to use. Some are already inside packages. We use the Boston Housing dataset from the `MASS` package:
+
+```{r}
+# install(MASS)
+library(MASS)
+data(Boston)
+
+# Inspect structure and preview
+str(Boston)
+head(Boston)
+```
+
+### Task 1: Subsetting
+- Create a new dataset with only houses where `rm > 6` (more than 6 rooms)
+
+```{r}
+large_houses <- subset(Boston, rm > 6)
+head(large_houses)
+```
+
+### Task 2: Column Filtering
+- Create a new data frame with only `rm`, `medv`, and `lstat` columns
+
+```{r}
+selected <- Boston[, c("rm", "medv", "lstat")]
+head(selected)
+```
+
+### Task 3: NA and Range Filter
+- Filter houses where `medv > 25` and `lstat < 10`
+
+```{r}
+subset(Boston, medv > 25 & lstat < 10)
+```
+
+### Task 4: Summary Statistics
+- Calculate the mean and range of `medv` for houses where `rm > 6`
+
+```{r}
+mean(large_houses$medv)
+range(large_houses$medv)
+```
+
+# Functions
+
+In R, functions are reusable blocks of code designed to perform a task. Functions take inputs (arguments), process them, and return a result. Writing functions avoids repetition and improves clarity.
+
+Basic structure:
+
+```{r}
+function_name <- function(arg1, arg2, arg3 = NULL, ...) {
+  # body
+  return(result)
+}
+
+```
+
+- **`function_name`**: the name of the function (case-sensitive)
+- **`arg1`, `arg2`, `arg3`, `...`**: input arguments. You can pass as many as needed. The `...` allows for flexible argument passing.
+- **`arg3 = NULL`**: default value. If `arg3` is not provided when calling the function, `NULL` will be used instead.
+- **`return()`**: used to return the output value from the function. If omitted, the result of the last evaluated expression will be returned implicitly.
+
+### Define and Call a Function
+
+```{r}
+funz <- function(a, b) {
+  res <- a + b + 10
+  return(res)
+}
+
+funz(3, 4)
+```
+
+### Return Multiple Objects
+
+```{r}
+funz <- function(a, b) {
+  op_1 <- a + b - a/2
+  op_2 <- a * b - 2*b
+  return(list(s = op_1, p = op_2))
+}
+
+res <- funz(2, 3)
+res$s
+res$p
+```
+
+# Conditional Execution: if and else
+
+Conditional execution is used when we want R to make decisions based on certain conditions. It helps control the flow of code execution using logic.
+
+```{r}
+x <- 2
+if(x > 2) print(">2") else print("<=2")
+```
+
+The `ifelse()` function is a vectorized version:
+
+```{r}
+x <- c(-3, 6, -4)
+y <- ifelse(x > 0, x, 0)
+y
+```
+
+### Task
+Try to obtain the same vector `y` using a `for` loop with `if` statements.
+
+# Conditional Execution: multiple if and else
+
+When multiple conditions need to be checked, you can chain `if`, `else if`, and `else` statements.
+
+```{r}
+x <- 13
+if (x > 0 && x < 10) {
+  "A"
+} else if (x >= 10 && x < 20) {
+  "B"
+} else if (x >= 20 && x < 30) {
+  "C"
+} else if (x >= 30 && x < 40) {
+  "D"
+} else {
+  NA
+}
+```
+
+### Task
+What is the result for `x <- -4, 32, 40, 41`?
+
+# Conditional Execution: case_when
+
+The `case_when()` function from the **dplyr** package is a convenient way to handle multiple conditions vectorized across a dataset.
+
+```{r}
+# install.packages("dplyr")  # if not already installed
+library(dplyr)
+
+x <- 1:50
+case_when(
+  x %% 35 == 0 ~ "fizz buzz",
+  x %% 5 == 0 ~ "fizz",
+  x %% 7 == 0 ~ "buzz",
+  TRUE ~ as.character(x)
+)
+```
+
+# Repetitive Execution: for
+
+Repetitive tasks can be automated using loops. A `for` loop repeats a block of code a fixed number of times.
+
+```{r}
+for(i in 1:3) {
+  print(i)
+}
+```
+
+```{r}
+y <- NULL
+x <- c(-3, 6, -4)
+for(i in 1:length(x)) {
+  if(x[i] > 0) {
+    y[i] <- x[i]
+  } else {
+    y[i] <- 0
+  }
+}
+y
+```
+
+> **Warning:** `for()` loops are used less in R compared to compiled languages. Prefer vectorized approaches.
+
+# Repetitive Execution: while
+
+A `while` loop repeats as long as a specified condition is true.
+
+```{r}
+x <- 1
+i <- i + 1
+while(i < 10) {
+  print(i)
+  i <- i + 1
+}
+```
+
+```{r}
+x <- 1
+while(x < 10) {
+  x <- x + 1
+  if(x == 7) next
+  if(x == 9) break
+  print(paste("The value of x is", x))
+}
+```
+
+# Repetitive Execution: repeat
+
+A `repeat` loop continues indefinitely until explicitly stopped by a `break`.
+
+```{r}
+x <- 1
+repeat {
+  print(paste("The value of x is", x))
+  x <- x + 1
+  if(x == 10) break
+}
+```
+
+# Summary Table: Control Flow Structures
+
+| Structure   | Use Case                             | Condition Required | Exit Strategy | Notes                                 |
+|-------------|--------------------------------------|---------------------|----------------|----------------------------------------|
+| `if/else`   | Branching logic                      | Yes (logical)       | N/A            | Use `else if` for multiple conditions  |
+| `ifelse()`  | Vectorized branching                 | Yes (vectorized)    | N/A            | Fast for element-wise replacement      |
+| `case_when` | Multiple condition mapping (vector)  | Yes (vectorized)    | N/A            | Part of `dplyr`                        |
+| `for`       | Fixed number of repetitions          | No                  | Loop ends      | Index-based iteration                  |
+| `while`     | Repeat while condition is true       | Yes (logical)       | On `FALSE`     | Risk of infinite loops                 |
+| `repeat`    | Infinite until break manually called | No                  | Manual `break` | Useful for indefinite length loops     |
+
+
+# Challenge: Mini Combined Task 
+
+### Objective:
+Create a function that takes a numeric vector and returns:
+
+- `"negative"` for values < 0
+- `"zero"` for values == 0
+- `"positive"` for values > 0
+Use a `for` loop and conditional statements inside the function.
+
+```{r}
+label_sign <- function(x) {
+  result <- character(length(x))
+  for(i in seq_along(x)) {
+    if(x[i] < 0) {
+      result[i] <- "negative"
+    } else if(x[i] == 0) {
+      result[i] <- "zero"
+    } else {
+      result[i] <- "positive"
+    }
+  }
+  return(result)
+}
+
+label_sign(c(-2, 0, 3, -1, 5))
+```
+
+## Loop Functions : apply, lapply, sapply
+
+Some functions which implement looping in a compact form to make your life easier:
+
+- `lapply()`: Loop over a list and evaluate a function on each element
+- `sapply()`: Same as lapply but try to simplify the result
+- `apply()`: Apply a function over the margins of an array
+- `tapply()`: Apply a function over subsets of a vector
+- `mapply()`: Multivariate version of lapply
+
+An auxiliary function `split` is also useful, particularly in conjunction with `lapply`.
+
+---
+
+### `lapply()`
+
+The `lapply()` function does the following simple series of operations:
+
+- it loops over a list, iterating over each element in that list
+- it applies a function to each element of the list (a function that you specify)
+- and returns a list (the l is for “list”)
+
+```{r}
+x <- list(a = 1:5, b = rnorm(10))
+lapply(x, mean)
+```
+
+```{r}
+unlist(lapply(x, mean)) # att to the output of the function
+```
+
+```{r}
+lapply(1:4, runif, min = 1, max = 4)
+```
+
+#### Task
+- Create a list with three numeric vectors and use `lapply()` to calculate their standard deviation
+
+---
+
+### `sapply()`
+
+The only real difference with `lapply()` is in the return value. `sapply()` will try to simplify the result of `lapply()` if possible. Essentially, `sapply()` calls `lapply()` on its input and then applies the following algorithm:
+
+- If the result is a list where every element is length 1, then a vector is returned
+- If the result is a list where every element is a vector of the same length (> 1), a matrix is returned.
+- If it can’t figure things out, a list is returned
+
+```{r}
+x <- list(a = 1:5, b = rnorm(10))
+lapply(x, mean)
+sapply(x, mean)
+```
+
+---
+
+### `split()`
+
+The `split()` function takes a vector or other objects and splits it into groups determined by a factor or list of factors.
+
+```{r}
+x <- c(rnorm(10), runif(10), rnorm(10, 1))
+f <- gl(3, 10)  ## generate level (as.factor(rep(1:3, each = 10)))
+split(x, f)
+
+lapply(split(x, f), mean)
+```
+
+---
+
+### `tapply()`
+
+tapply() is used to apply a function over subsets of a vector. It can be thought of as a combination of `split()` and `sapply()` for vectors only. Syntax: `function (X, INDEX, FUN = NULL,...)`
+
+```{r}
+x <- c(rnorm(10), runif(10), rnorm(10, 1))
+f <- gl(3, 10)
+tapply(x, f, mean)
+tapply(x, f, mean, simplify = FALSE)
+```
+
+---
+
+### `apply()`
+
+The `apply()` function is used to evaluate a function over the margins of an array.
+
+```{r}
+x <- matrix(rnorm(40), 8, 5)
+dim(x)
+
+apply(x, 2, mean)
+colMeans(x)
+
+apply(x, 1, mean)
+rowMeans(x)
+```
+
+#### Task
+- Create a 5x6 matrix of random integers and calculate the mean of each row using `apply()`
+
+---
+
+### `mapply()`
+
+The `mapply()` function is a multivariate apply of sorts which applies a function in parallel over a set of arguments. Recall that `lapply()` and friends only iterate over a single R object
+
+```{r}
+list(rep(1, 4), rep(2, 3), rep(3, 2), rep(4, 1))
+
+mapply(rep, 1:4, 4:1)
+```
+
+---
+
+### Comparison Summary Table
+
+| Function   | Input Type          | Output Type      | Purpose                                     |
+|------------|----------------------|------------------|---------------------------------------------|
+| `lapply()` | List or vector       | List             | Applies function and returns list           |
+| `sapply()` | List or vector       | Simplified (vec/matrix) | Tries to simplify lapply result     |
+| `tapply()` | Vector + factors     | Array/List       | Apply function by factor levels             |
+| `apply()`  | Array or matrix      | Vector/Array     | Apply over rows/cols (margins)              |
+| `mapply()` | Multiple arguments   | List/Vector      | Multivariate apply across arguments         |
+| `split()`  | Vector, factor       | List             | Group input into sub-lists by factors       |
+
+### Task
+
+Consider this custom dataset:
+
+```{r}
+df <- data.frame(
+  group = rep(c("A", "B"), each = 4),
+  score1 = c(8, 7, 9, 6, 5, 4, 6, 7),
+  score2 = c(3, 4, 3, 5, 6, 7, 6, 8)
+)
+df
+```
+
+1. Use `apply()` to find the standard deviation of each column in `df[, -1]`
+2. Use `tapply()` to calculate the sum of `score2` for each group
+3. Use `lapply()` on `split(df[, -1], df$group)` to get min values
+4. Use `sapply()` on `df[, -1]` to return the max of each column
+5. Use `mapply()` to add corresponding values of `score1` and `score2` row-wise
+
+
+1.
+```{r}
+apply(df[, -1], 2, sd)
+```
+
+2.
+```{r}
+tapply(df$score2, df$group, sum)
+```
+
+3.
+```{r}
+lapply(split(df[, -1], df$group), function(x) apply(x, 2, min))
+```
+
+4.
+```{r}
+sapply(df[, -1], max)
+```
+
+5.
+```{r}
+mapply(`+`, df$score1, df$score2)
+```
+
+# Distributions and Simulation
+
+### Probability Distributions in R
+R provides built-in support for a wide range of probability distributions. Each distribution has a common naming scheme:
+
+- `dxxx` for the density function \( f(y) \)
+- `pxxx` for the cumulative distribution function \( F(y) \)
+- `qxxx` for the quantile function \( F^{-1}(p) \)
+- `rxxx` for random sampling from the distribution
+
+Here are some commonly used distributions in R:
+
+| Distribution        | R name   | Additional Arguments       |
+|--------------------|----------|----------------------------|
+| beta               | `beta`   | `shape1`, `shape2`, `ncp`  |
+| binomial           | `binom`  | `size`, `prob`             |
+| Cauchy             | `cauchy` | `location`, `scale`        |
+| chi-squared        | `chisq`  | `df`, `ncp`                |
+| exponential        | `exp`    | `rate`                     |
+| F                  | `f`      | `df1`, `df2`, `ncp`        |
+| gamma              | `gamma`  | `shape`, `scale`           |
+| geometric          | `geom`   | `prob`                     |
+| hypergeometric     | `hyper`  | `m`, `n`, `k`              |
+| log-normal         | `lnorm`  | `meanlog`, `sdlog`         |
+| logistic           | `logis`  | `location`, `scale`        |
+| negative binomial  | `nbinom` | `size`, `prob`             |
+| normal             | `norm`   | `mean`, `sd`               |
+| Poisson            | `pois`   | `lambda`                   |
+| signed rank        | `signrank`| `n`                        |
+| Student's t        | `t`      | `df`, `ncp`                |
+| uniform            | `unif`   | `min`, `max`               |
+| Weibull            | `weibull`| `shape`, `scale`           |
+| Wilcoxon           | `wilcox` | `m`, `n`                   |
+
+---
+
+### Example: Working with the Normal Distribution
+```{r}
+x <- seq(-5, 5, length = 100)
+y <- dnorm(x)             # PDF of normal
+Fy <- pnorm(x)            # CDF of normal
+
+par(mfrow = c(1, 2))
+plot(x, y, type = "l")     # Plot the PDF
+plot(x, Fy, type = "l")    # Plot the CDF
+```
+
+### To Generate a Random Sample
+```{r}
+set.seed(42)            # For reproducibility
+runif(10, 0, 1)         # 10 random values between 0 and 1
+```
+
+# Graphical representation
+
+One of the most frequently used plotting functions in R is the `plot()` function. This is a generic function: the type of plot produced depends on the type or class of the first argument.
+
+- If `x` and `y` are vectors, `plot(x, y)` produces a scatterplot of `y` against `x`.
+
+```{r}
+x <- rnorm(100)
+y <- rnorm(100)
+
+plot(x, 
+     y, 
+     main = "X vs Y", 
+     xlab = "x", 
+     ylab = expression(y[1]), 
+     type = "p", 
+     cex = 2)
+```
+
+### Homework:
+
+**Task 1**
+ Define a function that classifies each number in a vector:
+ 
+ - If the number is even and positive, return "Positive Even"
+ - If the number is odd and positive, return "Positive Odd"
+ - If the number is negative, return "Negative"
+ - If zero, return "Zero"
+
+**Task 2**
+1. Create a vector of any 10 integers (both positive and negative).
+2. Write a custom function that:
+
+   - Returns "GT10" if the number is greater than 10
+   - Returns "LT0" if less than 0
+   - Returns "OK" otherwise
+   
+3. Apply this function using one of: `sapply()`, `lapply()`, or a loop.
+4. Challenge: Wrap the whole procedure into a user-defined function that accepts a numeric vector and returns classification.
+
+---
+
+# EXTRA
+
+## Generating Regular Sequences
+
+To generate a sequence of the first 100 even numbers:
+
+```{r}
+even100 <- seq(from = 2, to = 2 * 100, by = 2)
+length(even100)
+head(even100)  # show the first 6 values
+```
+
+Create a sequence using length and step:
+
+```{r}
+s4 <- seq(length = 10, from = -5, by = 0.2)
+s4
+```
+
+Use `:` to generate simple integer sequences:
+
+```{r}
+1:10
+```
+
+### Repeat the Same Sequence
+
+Create vectors with repeated values:
+
+```{r}
+rep(4, 5)               # repeat value 4, five times
+rep(c(1, 2), 3)         # repeat sequence 1,2 three times
+rep(c(1, 2), each = 3)  # repeat each element three times
+```
+
+### Task
+
+- Divide the interval (0, 1) into 4 subintervals
+- Repeat the values in the previous vector three times
+
+```{r}
+seq_4 <- seq(from = 0, to = 1, length.out = 5)  # 4 subintervals = 5 points
+rep_seq <- rep(seq_4, 3)
+rep_seq
+```

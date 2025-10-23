@@ -1,0 +1,625 @@
+
+---
+title: "Practice 4 - Linear Regression"
+author: "Lorenzo Rossi"
+date: "2025-05-08"
+output:
+  pdf_document:
+    latex_engine: xelatex
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+# Simple linear regression
+
+This session introduces **simple and multiple linear regression** using the `Wage` dataset. We'll explore how features like **age**, **education**, and **job class** affect **individual wages**.
+
+### Objectives:
+- Understand the mechanics and assumptions of linear regression
+
+- Learn how to interpret coefficients
+
+- Conduct diagnostic checks and inference
+
+- Explore binary variables and model extensions
+
+# The Linear Regression Model
+
+Linear regression models the relationship between a **dependent variable** \( Y \) and one or more **independent variables** \( X \):
+
+\[
+Y = \beta_0 + \beta_1 X + u
+\]
+
+Where:
+- \( Y \): outcome variable (e.g., wage)
+- \( X \): predictor (e.g., age)
+- \( \beta_0 \): intercept
+- \( \beta_1 \): slope (change in \( Y \) for a one-unit change in \( X \))
+- \( u \): error term
+
+### OLS Estimation
+
+OLS chooses the line that minimizes the sum of squared residuals. The formulas for the estimates are:
+
+\[
+\hat{\beta}_1 = \frac{\sum (X_i - \bar{X})(Y_i - \bar{Y})}{\sum (X_i - \bar{X})^2}, \quad \hat{\beta}_0 = \bar{Y} - \hat{\beta}_1 \bar{X}
+\]
+
+---
+
+### OLS Assumptions (Required for Valid Inference)
+
+1. **Linearity**: The relationship between X and Y is linear.
+
+2. **Independence**: The residuals are independent.
+
+3. **Homoscedasticity**: Residuals have constant variance.
+
+4. **Normality**: The residuals are normally distributed.
+
+➡ We’ll evaluate these assumptions using residual plots, QQ plots, and statistical tests.
+
+---
+
+### Goodness of fit
+
+In regression analysis, **goodness of fit** tells us how well our model explains the variability in the outcome (here, wage):
+
+- **R²** (coefficient of determination): proportion of variance in wage explained by the model.
+
+- **Adjusted R²**: like R², but penalizes adding unhelpful variables. Preferred when comparing models with different numbers of predictors.
+
+- **F-test**: tests if the model as a whole is statistically significant.
+
+
+
+
+# Load Libraries and Dataset
+
+```{r load-packages}
+library(ISLR)
+library(tidyverse)
+library(ggplot2)
+library(lmtest)
+library(broom)
+library(ggfortify)
+library(sandwich)
+library(car)
+library(stargazer)
+library(olsrr)
+library(jtools)
+```
+
+```{r load-data}
+data("Wage")
+str(Wage)
+summary(Wage)
+```
+
+---
+
+# Correlation: Wage vs Age and Year
+
+```{r correlation}
+cor(Wage %>% select(wage, age, year), use = "complete.obs")
+```
+
+---
+
+# 1. Wage vs Age
+
+```{r model-age}
+model_age <- lm(wage ~ age, data = Wage)
+summary(model_age)
+confint(model_age)
+```
+
+```{r plot-age}
+ggplot(Wage, aes(x = age, y = wage)) +
+  geom_point(alpha = 0.3, color = "blue") +
+  geom_smooth(method = "lm", color = "red") +
+  labs(title = "Wage vs Age", x = "Age", y = "Wage")
+```
+
+### Tasks:
+- Interpret the slope coefficient: What does it tell you?
+
+- Is the relationship statistically significant?
+
+- What does the \( R^2 \) tell you about model fit?
+
+---
+
+# 2. Wage vs Education (Categorical Dummy Model)
+
+```{r model-edu}
+model_edu <- lm(wage ~ education, data = Wage)
+summary(model_edu)
+confint(model_edu)
+```
+
+```{r plot-edu}
+ggplot(Wage, aes(x = education, y = wage)) +
+  geom_boxplot(fill = "lightgreen") +
+  labs(title = "Wage by Education Level", x = "Education", y = "Wage")
+```
+
+### Coefficient Interpretation:
+
+In a model like `wage ~ education`, each education level (except the base) **shifts the intercept**. For example:  
+> “Individuals with a college degree earn, on average, X dollars more than those with less than HS education.”
+
+### Tasks:
+
+- What is the reference category in this regression? How can you tell?
+
+- Interpret the coefficient for “College Grad.” What does it mean in real-world terms?
+
+- Which education levels have a statistically significant impact on wage?
+
+- How does the inclusion of categorical variables (factors) affect model interpretation?
+---
+
+# 3. Wage vs Job Class (Binary Variable)
+
+```{r model-job}
+model_job <- lm(wage ~ jobclass, data = Wage)
+summary(model_job)
+confint(model_job)
+```
+
+```{r plot-job}
+ggplot(Wage, aes(x = jobclass, y = wage)) +
+  geom_boxplot(fill = "orange") +
+  labs(title = "Wage by Job Class", x = "Job Class", y = "Wage")
+```
+
+### Binary Variable Discussion:
+
+This model estimates the **difference in mean wage** between "Information" and "Industrial" job classes:
+
+- The **intercept** is the mean for the baseline group (e.g., "Industrial").
+
+- The coefficient on "Information" shifts the intercept up/down.
+
+### Tasks:
+- What does the coefficient for “Information” jobs mean?
+
+- What is the reference category? How do you know?
+
+- Would you expect job type to interact with education? Why or why not?
+
+---
+
+
+# Multiple Regression
+
+In this extension, we explore advanced linear modeling concepts. We'll demonstrate:
+
+- Multiple regression
+
+- Robust standard errors
+
+- Multicollinearity
+
+- Nonlinear and log models
+
+- Interaction terms
+
+- Model comparison
+
+- Stepwise model selection
+
+- Collinearity and variance inflation factors (VIF)
+
+Why Use Multiple Linear Regression?
+
+In simple regression, we only consider one explanatory variable. However, real-world outcomes often depend on many factors.
+
+For example, wage might depend on **age**, **education**, **job type**, **health**, and **marital status**. Multiple regression lets us:
+
+- Control for multiple influences at once
+
+- Estimate the **independent effect** of each predictor
+
+- Reduce omitted variable bias (when relevant factors are left out)
+
+- Improve predictive accuracy by increasing the explained variance (R²)
+
+> Example: If both age and education affect wages and are correlated, leaving education out biases the estimated effect of age.
+
+```{r model-multi}
+model_multi <- lm(wage ~ age + education + jobclass, data = Wage)
+summary(model_multi)
+confint(model_multi)
+```
+
+### Tasks:
+- Which variables are significant predictors?
+
+- How do coefficients change from the simple models?
+
+- What’s the model’s overall fit (e.g., \( R^2 \), F-test)?
+
+---
+
+### Residual Diagnostics (OLS Assumption Checks)
+
+```{r residuals-check}
+par(mfrow = c(1, 2))
+plot(model_multi$fitted.values, model_multi$residuals,
+     main = "Residuals vs Fitted",
+     xlab = "Fitted Values", ylab = "Residuals", pch = 20)
+qqnorm(model_multi$residuals)
+qqline(model_multi$residuals)
+```
+
+### Statistical Assumption Tests
+
+OLS assumes errors are:
+
+- Normally distributed (for valid inference)
+
+- Homoscedastic (same variance across predictors)
+
+These assumptions are tested via:
+
+- **Breusch-Pagan Test** for heteroscedasticity:
+
+```{r bp-test}
+bptest(model_multi)
+```
+
+- **Shapiro-Wilk Test** or **Q-Q Plot** for normality:
+
+```{r shapiro}
+shapiro.test(sample(model_multi$residuals, 500))
+qqnorm(model_multi$residuals); qqline(model_multi$residuals)
+```
+
+---
+
+### Model Summary
+
+```{r tidy-summary}
+tidy(model_multi)
+glance(model_multi)
+```
+
+---
+
+### Confidence Intervals and Hypothesis Testing in Multiple Regression
+
+
+A **confidence interval** provides a range of plausible values for a regression coefficient. It tells us where we expect the true value of the coefficient to lie, with a certain level of confidence (usually 95%).
+
+**Formula**:
+
+\[
+[\hat{β}_j - z_{1-α/2} \cdot SE(\hat{β}_j), \hat{β}_j + z_{1-α/2} \cdot SE(\hat{β}_j)]
+\]
+
+For 95% confidence, \( z_{1-α/2} ≈ 1.96 \).
+
+
+You can compute confidence intervals in R using:
+
+```{r confint-multi}
+confint(model_multi)
+confint(model_age)
+```
+
+### Hypothesis Tests
+
+Regression output includes **hypothesis tests** that assess whether each coefficient is statistically different from zero.
+
+- **Null hypothesis**: \( H_0: β_j = 0 \)
+
+- **Alternative**: \( H_1: β_j ≠ 0 \)
+
+- **Test statistic**:
+\[
+t = \frac{\hat{β}_j}{SE(\hat{β}_j)}
+\]
+
+If the p-value is less than 0.05, we typically reject \( H_0 \), suggesting the predictor has a statistically significant impact on the outcome.
+
+R uses asterisks for significance:
+
+- `***`: p < 0.01 (highly significant)
+
+- `**`: p < 0.05
+
+- `*`: p < 0.10
+
+- No star: not statistically significant
+
+---
+
+### F-tests
+
+F-tests extend this logic to **multiple coefficients** at once.
+
+- Example: testing whether all age × education interactions can be excluded from the model.
+
+- F-statistic compares the full model (with interactions) to a reduced one (without them).
+
+If the full model improves fit significantly, the F-test will be significant, supporting the inclusion of those predictors.
+
+---
+
+### Goodness-of-Fit Metrics
+
+```{r gof-multi}
+RSS <- sum(resid(model_multi)^2)
+TSS <- sum((Wage$wage - mean(Wage$wage))^2)
+ESS <- TSS - RSS
+R2 <- summary(model_multi)$r.squared
+SER <- sqrt(RSS / df.residual(model_multi))
+RMSE <- sqrt(mean(resid(model_multi)^2))
+list(RSS = RSS, TSS = TSS, ESS = ESS, R2 = R2, SER = SER, RMSE = RMSE)
+```
+
+
+### Robust Standard Errors
+
+If residuals do not have constant variance (**heteroskedasticity**), standard errors from OLS may be incorrect.
+
+**Robust standard errors** adjust for this and provide more reliable inference. This is especially important in social science data like wages.
+
+
+```{r robust-se}
+coeftest(model_multi, vcov. = vcovHC, type = "HC1")
+```
+
+### Multicollinearity Check
+
+Multicollinearity occurs when predictors are highly correlated, making it hard to isolate individual effects. This:
+
+- Inflates standard errors
+
+- Makes it harder to detect significant effects
+
+- Leads to **unreliable coefficient estimates**
+
+- Non-significant p-values even when the model fit (F-test, R²) is high
+
+We check this with **VIF (Variance Inflation Factor)**:
+
+- VIF > 10 suggests problematic multicollinearity
+
+
+
+### Example:
+> If `age` and `age × education` are included without centering age, it can cause extreme VIF values (like > 50,000), which makes the estimates unreliable.
+
+
+
+
+```{r vif-check}
+vif(model_multi)
+```
+
+# Nonlinear Transformations and Model Selection
+
+### What Does "Linear" Mean in Regression?
+
+The word **linear** in “linear regression” refers to being **linear in the parameters**, not necessarily the variables. So even if we transform variables (e.g., square them or take logs), the model remains linear if it is still linear in the **β coefficients**.
+
+This flexibility allows us to model **nonlinear relationships** while still using OLS.
+
+---
+
+### Polynomial Models
+
+If a scatterplot shows curvature, consider polynomial regression:
+
+### Quadratic Model:
+\[
+Y = β_0 + β_1X + β_2X^2 + u
+\]
+
+### Cubic Model:
+\[
+Y = β_0 + β_1X + β_2X^2 + β_3X^3 + u
+\]
+
+These models are still linear in β, but allow for flexible shapes. Interpretation changes: **the marginal effect of X is no longer constant**, and must be derived from the model formula.
+
+---
+
+## Logarithmic Transformations
+
+ Three types:
+
+1. **Linear-log**:  
+\[
+Y = β_0 + β_1 \log(X) + u
+\]  
+Interpretation: a 1% increase in X leads to a change of **β₁ × 0.01 units** in Y.
+
+2. **Log-linear**:  
+\[
+\log(Y) = β_0 + β_1X + u
+\]  
+Interpretation: a one-unit increase in X changes Y by **100 × β₁ %**.
+
+3. **Log-log**:  
+\[
+\log(Y) = β_0 + β_1\log(X) + u
+\]  
+Interpretation: a 1% increase in X changes Y by **β₁ %**.
+
+Use log transformations when relationships are **multiplicative** or **exponential**.
+
+---
+
+### Interactions
+
+An **interaction** means that the effect of one variable **depends on another**. We include product terms like:
+
+\[
+Y = β_0 + β_1X_1 + β_2X_2 + β_3(X_1 \cdot X_2) + u
+\]
+
+> Example: The effect of age on wage may vary depending on education level.
+
+If the interaction term is significant, the marginal effect of one regressor varies with the level of the other.
+
+
+### Nonlinear Models: Quadratic and Cubic in Age
+
+```{r nonlinear-age}
+quad_mod <- lm(wage ~ age + I(age^2), data = Wage)
+cubic_mod <- lm(wage ~ poly(age, 3, raw = TRUE), data = Wage)
+coeftest(quad_mod, vcov. = vcovHC, type = "HC1")
+coeftest(cubic_mod, vcov. = vcovHC, type = "HC1")
+```
+
+### Plot: Linear vs Quadratic Model
+
+```{r plot-linear-quad}
+ggplot(Wage, aes(x = age, y = wage)) +
+  geom_point(alpha = 0.3, color = "gray") +
+  geom_smooth(method = "lm", formula = y ~ x, color = "blue", se = FALSE) +
+  stat_smooth(method = "lm", formula = y ~ poly(x, 2, raw=TRUE), color = "red", se = FALSE) +
+  labs(title = "Linear vs Quadratic Fit", x = "Age", y = "Wage")
+```
+
+### Log-Linear and Log-Log Models
+
+```{r log-models}
+loglin_model <- lm(log(wage) ~ age, data = Wage)
+loglog_model <- lm(log(wage) ~ log(age), data = Wage)
+coeftest(loglin_model, vcov. = vcovHC, type = "HC1")
+coeftest(loglog_model, vcov. = vcovHC, type = "HC1")
+```
+
+### Interaction Model: Age × Education
+
+```{r interaction-model}
+int_model <- lm(wage ~ age * education, data = Wage)
+coeftest(int_model, vcov. = vcovHC, type = "HC1")
+```
+
+### Model Comparison Table
+
+```{r model-comparison}
+mod1 <- lm(wage ~ age, data = Wage)
+mod2 <- lm(wage ~ age + education, data = Wage)
+mod3 <- lm(wage ~ age + education + jobclass, data = Wage)
+mod4 <- lm(wage ~ age * education, data = Wage)
+
+rob_se <- list(
+  sqrt(diag(vcovHC(mod1, type = "HC1"))),
+  sqrt(diag(vcovHC(mod2, type = "HC1"))),
+  sqrt(diag(vcovHC(mod3, type = "HC1"))),
+  sqrt(diag(vcovHC(mod4, type = "HC1")))
+)
+
+stargazer(mod1, mod2, mod3, mod4,
+          se = rob_se,
+          type = "text",
+          column.labels = c("Simple", "Add Education", "Add Jobclass", "Interaction"),
+          title = "Model Comparison: Wage Regression with Robust SEs",
+          digits = 3)
+```
+
+
+
+### Model: Wage ~ Age + Education + Jobclass
+
+```{r model-basic}
+model <- lm(wage ~ age + education + jobclass, data = Wage)
+coeftest(model, vcov. = vcovHC, type = "HC1")
+```
+
+### Residual Diagnostics
+
+```{r diagnostics}
+par(mfrow = c(2, 2))
+plot(model)
+```
+
+### Influential Observations
+
+- An **outlier** has a response far from the model’s prediction
+
+- A **high leverage** point is extreme in its predictor values
+
+- An **influential** point changes the regression results significantly if removed
+
+We assess influence using **Cook’s Distance**:
+
+- Observations with \( D_i > 1 \) are considered highly influential
+
+```{r cooks}
+ols_plot_cooksd_bar(model)
+```
+
+
+### Stepwise Model Selection
+
+Not all predictors improve a model. Stepwise regression (used here) selects variables by balancing:
+
+- Statistical significance
+
+- Predictive accuracy
+
+- Model simplicity
+
+This avoids overfitting and helps focus on the most important effects.
+
+Methods:
+
+- **Best Subset Selection**: Fit all possible models (exhaustive, but computationally heavy)
+
+- **Forward Selection**: Add variables one at a time
+
+- **Backward Elimination**: Start full, remove unhelpful variables
+
+- **Stepwise Selection**: Combine forward and backward steps
+
+Model Criteria:
+
+- **AIC (Akaike Information Criterion)**: balances fit and complexity
+
+- **BIC (Bayesian Information Criterion)**: like AIC but more strict
+
+- **Adjusted R²**: penalizes for added variables
+
+- **Cp statistic**: targets predictive accuracy
+
+
+```{r stepwise}
+full_model <- lm(wage ~ age * education + jobclass + health + race + maritl, data = Wage, x = TRUE)
+step_model <- step(full_model, direction = "both", trace = FALSE)
+coeftest(step_model, vcov. = vcovHC, type = "HC1")
+```
+
+### RESET Test for Functional Form Misspecification
+
+Even if variables are correct, the **form** of the regression may be wrong.
+
+- Use **residual vs. fitted plots** to check for nonlinearity
+
+- Consider **polynomial** or **log** transformations if curvature is visible
+
+- The **RESET test** checks overall misspecification:
+
+
+```{r reset}
+resettest(step_model, power = 2:3, type = "fitted", vcov = vcovHC)
+```
+
+### Collinearity Diagnosis with VIF
+
+In our example, VIFs > 50,000 imply **extreme** multicollinearity in education × age interactions
+
+```{r vif}
+summ(step_model, vifs = TRUE, robust = "HC1")
+```

@@ -1,0 +1,713 @@
+---
+title: "Practice 8 - Panel Data"
+author: "Lorenzo Rossi"
+date: "`r Sys.Date()`"
+output: 
+  html_document: default
+  pdf_document: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, fig.width = 10, fig.height = 6)
+```
+
+# Introduction
+
+## 1. Introduction to Panel Data
+
+Panel data combines cross-sectional and time series dimensions, tracking the same entities (individuals, firms, cities, counties) over multiple time periods. This structure allows us to control for unobserved heterogeneity and identify causal relationships more reliably than pure cross-sectional or time series data.
+
+**Key Advantage**: Panel data helps address the omitted variable bias problem by controlling for unobserved characteristics that don't change over time.
+
+
+This practice session covers panel data analysis using three datasets from the Wooldridge package:
+
+1. **rental**: Rental prices in college towns
+2. **vote2**: Electoral competition and campaign spending
+3. **crime4**: County-level crime rates
+
+## Load Required Packages
+
+```{r packages}
+# Install packages if needed
+# install.packages(c("wooldridge", "plm", "stargazer", "lmtest", "ggplot2", "dplyr", "car"))
+
+# Load packages
+library(wooldridge)
+library(plm)
+library(stargazer)
+library(lmtest)
+library(ggplot2)
+library(dplyr)
+library(car)  # for linearHypothesis
+
+# Set seed for reproducibility
+set.seed(123)
+```
+
+# Part 1: Rental Prices in College Towns
+
+- city: City identifier (panel unit)  
+
+- year: Year of observation (1980 or 1990)  
+
+- pop: City population  
+
+- enroll: College enrollment  
+
+- rent: Median gross rent  
+
+- rnthsg: Number of rental housing units  
+
+- tothsg: Total number of housing units  
+
+- avginc: Average household income  
+
+- lenroll: Log of enrollment  
+
+- lpop: Log of population  
+
+- lrent: Log of median rent  
+
+- ltothsg: Log of total housing units  
+
+- lrnthsg: Log of rental housing units  
+
+- lavginc: Log of average income  
+
+- clenroll: Change in log enrollment (first difference) 
+
+- clpop: Change in log population  
+
+- clrent: Change in log rent  
+
+- cltothsg: Change in log total housing units  
+
+- clrnthsg: Change in log rental housing units  
+
+- clavginc: Change in log average income  
+
+- pctstu: Percentage of students (enroll / pop × 100)  
+
+- cpctstu: Change in percentage of students  
+
+- y90: Dummy variable for year 1990 (1 if year == 1990)  
+
+## 1.1 Data Preparation and Exploration
+
+```{r rental-data-prep}
+# Load the rental dataset
+data("rental")
+
+# Create student density variable
+rental$enr_p = rental$enroll/rental$pop*100
+
+# Display structure and summary
+str(rental)
+```
+
+```{r rental-summary}
+# Summary statistics of key variables
+summary(rental[c("rent", "pop", "enroll", "avginc", "year", "enr_p")])
+```
+
+## 1.2 Visualization
+
+```{r rental-viz1}
+# Visualize the relationship over time
+ggplot(rental, aes(x = enr_p, y = log(rent), color = factor(year))) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "Log Rent vs Student Density by Year",
+       x = "Student Density (%)",
+       y = "Log(Rent)",
+       color = "Year") +
+  theme_minimal()
+```
+
+```{r rental-viz2}
+# Scatterplot matrix for variable selection
+pairs(~lrent + lenroll + enr_p + lpop + lavginc, 
+      data = rental,
+      main = "Scatterplot Matrix for Variable Selection")
+```
+
+## 1.3 Basic Panel Models
+
+### Pooled OLS
+
+**What it does**: Treats all observations as independent, ignoring the panel structure entirely.
+
+**Model**: y_it = β₀ + β₁x_it + ε_it
+
+**Assumptions**: 
+- No correlation between observations
+- Homogeneity across units and time
+- No unobserved heterogeneity
+
+
+```{r rental-pooled}
+# Pooled OLS (ignoring panel structure)
+rental.pooled <- lm(lrent ~ enr_p + lpop + lavginc + y90, data = rental)
+summary(rental.pooled)
+```
+**Interpretation**: A 1% increase in student density (enr_p) is associated with a β₁% change in log rent, assuming all other factors are constant. However, this ignores city-specific characteristics that might affect both student density and rent prices.
+
+
+### First Difference Estimation
+
+**What it does**: Eliminates individual fixed effects by taking first differences.
+
+**Model**: Δy_it = β₁Δx_it + Δε_it
+
+**Advantage**: Eliminates any time-invariant unobserved heterogeneity without requiring large datasets.
+
+
+```{r rental-fd-manual}
+# Create panel data frame
+rental.panel <- pdata.frame(rental, index = c("city", "year"))
+
+# Manual first differences
+rental.fd <- rental.panel %>%
+  group_by(city) %>%
+  mutate(
+    d.lrent = lrent - lag(lrent),
+    d.enr_p = enr_p - lag(enr_p),
+    d.lpop = lpop - lag(lpop),
+    d.lavginc = lavginc - lag(lavginc)
+  ) %>%
+  filter(!is.na(d.lrent))
+
+rental.fd <- rental.panel %>%
+  group_by(city) %>%
+  mutate(across(c(lrent, enr_p, lpop, lavginc), ~ . - lag(.), .names = "d.{col}")) %>%
+  ungroup() %>%
+  filter(!is.na(d.lrent))
+
+# First difference model
+fd.model <- lm(d.lrent ~ d.enr_p + d.lpop + d.lavginc, data = rental.fd)
+coeftest(fd.model, vcov. = vcovHC, type = "HC1")
+```
+**Interpretation**: Changes in student density are associated with changes in log rent, controlling for any time-invariant city characteristics.
+
+
+### Fixed Effects Models
+
+**What it does**: Controls for all time-invariant unobserved characteristics at the individual level.
+
+**Model**: y_it = β₁x_it + α_i + λ_t + ε_it
+
+Where:
+- α_i = individual-specific fixed effects (absorbs all time-invariant characteristics)
+- λ_t = time-specific fixed effects (optional)
+
+**Key Insight**: Uses within-individual variation over time to identify effects.
+
+
+
+```{r rental-fe}
+# One-way Fixed Effects (city)
+rental.fe <- plm(lrent ~ enr_p + lpop + lavginc,
+                 data = rental,
+                 index = c("city", "year"),
+                 model = "within",
+                 effect = "individual")
+summary(rental.fe)
+```
+**Interpretation**: Within the same city over time, a 1 percentage point increase in student density increases log rent by 0.52%. This controls for all time-invariant city characteristics (location, climate, regulations, etc.).
+
+```{r rental-twoway}
+# Two-way Fixed Effects (city and time)
+rental.twoway <- plm(lrent ~ enr_p + lpop + lavginc,
+                     data = rental,
+                     index = c("city", "year"),
+                     model = "within",
+                     effect = "twoways")
+summary(rental.twoway)
+```
+**What it does**: Controls for both individual and time fixed effects simultaneously.
+
+**Model**: y_it = β₁x_it + α_i + λ_t + ε_it
+
+**When to use**: When there are common time trends affecting all units (economic cycles, policy changes, etc.).
+
+## 1.4 Alternative Specifications
+
+### Alternative 1: Non-linear Effects
+
+```{r rental-alt1}
+# Quadratic effect of student density
+rental$enr_p_sq <- rental$enr_p^2
+
+rental.alt1 <- plm(lrent ~ enr_p + enr_p_sq + lpop + lavginc,
+                   data = rental,
+                   index = c("city", "year"),
+                   model = "within",
+                   effect = "individual")
+summary(rental.alt1)
+
+# Test for non-linearity
+linearHypothesis(rental.alt1, "enr_p_sq = 0")
+```
+
+## 1.5 Model Comparison
+
+```{r rental-comparison}
+# Note: stargazer output is formatted for LaTeX/HTML
+# For console output, use type = "text"
+stargazer(rental.pooled, rental.fe, rental.twoway, rental.alt1,
+          type = "text",
+          title = "Comparison of Rental Price Models",
+          column.labels = c("Pooled OLS", "FE", "Two-way FE", "Quadratic"),
+          keep.stat = c("n", "rsq", "adj.rsq"),
+          digits = 3)
+```
+
+```{r rental-viz-nonlinear}
+# Visualize non-linear relationship
+ggplot(rental, aes(x = enr_p, y = lrent)) +
+  geom_point(aes(color = factor(year))) +
+  geom_smooth(method = "lm", formula = y ~ x + I(x^2), se = TRUE) +
+  labs(title = "Non-linear Relationship: Student Density and Log Rent",
+       x = "Student Density (%)",
+       y = "Log(Rent)") +
+  theme_minimal()
+```
+
+# Part 2: Electoral Competition (vote2 dataset)
+
+Variable descriptions:
+
+- vote90: Votes received by incumbent in 1990
+
+- vote88: Votes received by incumbent in 1988
+
+- voteshare: Incumbent vote share in 1990
+
+- democ: 1 if incumbent is Democrat
+
+- inexp90: Incumbent expenditure in 1990
+
+- chexp90: Challenger expenditure in 1990
+
+- inexp88: Incumbent expenditure in 1988
+
+- chexp88: Challenger expenditure in 1988
+
+- prtystr: Party strength of incumbent
+
+- rptchall: 1 if repeat challenger
+
+- tenure: Years incumbent has held the seat
+
+- lawyer: 1 if incumbent is a lawyer
+
+- linexp90: log(inexp90)
+
+- lchexp90: log(chexp90)
+
+- linexp88: log(inexp88)
+
+- lchexp88: log(chexp88)
+
+- incshr90: incumbent's vote share 1990
+
+- incshr88: incumbent's vote share 1988
+
+- cvote: Change in vote share (90 vs 88)
+
+- clinexp: Change in log(inexp) 90 vs 88
+
+- clchexp: Change in log(chexp) 90 vs 88
+
+- cincshr: Change in incumbent share
+
+- win88: 1 if incumbent won in 1988
+
+- win90: 1 if incumbent won in 1990
+
+- cwin: Change in win status
+
+## 2.1 Data Preparation and Exploration
+
+```{r vote2-data-prep}
+# Load the vote2 dataset
+data("vote2")
+# Ensure panel identifier
+
+# Create vote share from 1990 election (assume vote90 + vote88 is total)
+vote2$voteshare <- vote2$vote90 / (vote2$vote90 + vote2$vote88) * 100
+
+# Summary statistics
+summary(vote2[c("voteshare", "tenure", "cvote", "clinexp", "clchexp")])
+
+```
+
+```{r vote2-panel}
+# Create panel data structure
+vote2 <- pdata.frame(vote2, index = c("district", "state"))
+
+# Check panel balance and dimensions
+pdim(vote2)
+```
+
+## 2.2 Visualization
+
+```{r vote2-viz}
+## 2.5 Visualization by Party
+
+# Change in spending vs change in vote share
+vote2_plot <- as.data.frame(vote2)
+
+ggplot(vote2_plot, aes(x = clinexp, y = cvote)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  labs(title = "Change in Incumbent Spending vs Change in Vote Share",
+       x = "Change in Log(Incumbent Spending)",
+       y = "Change in Vote Share") +
+  theme_minimal()
+
+```
+
+## 2.3 Basic Panel Models
+
+### Pooled OLS
+
+```{r vote2-pooled}
+# Pooled OLS
+vote.pooled <- lm(cvote ~ clinexp + clchexp + tenure, data = vote2)
+summary(vote.pooled)
+```
+
+### Fixed Effects
+
+```{r vote2-fe}
+# Fixed Effects (district level)
+vote.fe <- plm(cvote ~ clinexp + clchexp + tenure,
+               data = vote2,
+               model = "within",
+               effect = "individual")
+summary(vote.fe)
+```
+
+### Random Effects
+
+**What it does**: Assumes individual-specific effects are random and uncorrelated with explanatory variables.
+
+**Model**: y_it = β₀ + β₁x_it + α_i + ε_it, where α_i ~ N(0, σ²_α)
+
+**Key Advantage**: More efficient than fixed effects when assumptions hold (uses both within and between variation).
+
+**Key Assumption**: E(α_i|x_it) = 0 (individual effects uncorrelated with regressors)
+
+
+```{r vote2-re}
+# Random Effects
+vote.re <- plm(cvote ~ clinexp + clchexp + tenure,
+               data = vote2,
+               model = "random")
+summary(vote.re)
+
+
+```
+The random effects model assumes that unobserved district characteristics are uncorrelated with spending changes and tenure.
+
+### Hausman Test
+
+**Purpose**: Tests whether random effects assumptions are valid (H₀: Random effects consistent and efficient).
+
+**Interpretation**:
+- **If p < 0.05**: Reject H₀ → Use Fixed Effects (RE assumptions violated)
+
+- **If p > 0.05**: Cannot reject H₀ → Random Effects preferred (more efficient)
+
+
+```{r vote2-hausman}
+# Hausman test: Fixed vs Random Effects
+phtest(vote.fe, vote.re)
+```
+
+### First Differences
+
+```{r vote2-fd}
+# First Differences
+vote.fd <- plm(cvote ~ clinexp + clchexp + tenure,
+               data = vote2,
+               model = "fd")
+summary(vote.fd)
+```
+
+## 2.4 Alternative Specifications
+
+### Alternative 1: Expenditure Ratio
+
+```{r vote2-alt1}
+# Focus on incumbent advantage and expenditure ratio
+vote2$tenure_sq <- vote2$tenure^2
+
+vote.alt1 <- plm(cvote ~ clinexp + clchexp + tenure + tenure_sq,
+                 data = vote2,
+                 model = "within",
+                 effect = "individual")
+summary(vote.alt1)
+```
+
+## 2.5 Model Comparison and Visualization
+
+```{r vote2-comparison}
+# Compare models
+stargazer(vote.pooled, vote.fe, vote.re, vote.alt1,
+          type = "text",
+          title = "Comparison of Electoral Competition Models",
+          column.labels = c("Pooled OLS", "Fixed Effects", "Random Effects", "Exp Ratio"),
+          keep.stat = c("n", "rsq", "adj.rsq"))
+```
+
+
+# Part 3: Crime Rates Analysis (crime4 dataset)
+
+- crmrte: Crime rate per person
+
+- crimerate: Crime rate per 1000 people
+
+- prbarr: Probability of arrest
+
+- prbconv: Probability of conviction
+
+- polpc: Police per capita
+
+- density: Population density
+
+- year: Observation year
+
+- wcon: Average weekly wage in construction
+
+- taxpc: Taxes per capita
+
+- mix: % of property crimes in total crime
+
+- urban: 1 if urban county, 0 if rural
+
+- pctmin80: % minority population in 1980
+
+- pctymle: % young males in population
+
+- county: County identifier
+
+## 3.1 Data Preparation and Exploration
+
+```{r crime4-data-prep}
+# Load the crime4 dataset
+data("crime4")
+
+# Create crime rate per capita
+crime4$crimerate <- crime4$crmrte * 1000  # crimes per 1000 people
+
+# Summary statistics
+summary(crime4[c("crimerate", "prbarr", "prbconv", "polpc", "density", "year")])
+```
+
+```{r crime4-panel}
+# Create panel data frame
+crime4.panel <- pdata.frame(crime4, index = c("county", "year"))
+
+# Check panel structure
+pdim(crime4.panel)
+```
+
+## 3.2 Visualization
+
+```{r crime4-viz-trends}
+# Visualize crime trends
+crime_trends <- crime4 %>%
+  group_by(year) %>%
+  summarise(avg_crime = mean(crimerate, na.rm = TRUE))
+
+ggplot(crime_trends, aes(x = year, y = avg_crime)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Average Crime Rate Over Time",
+       x = "Year",
+       y = "Crimes per 1000 people") +
+  theme_minimal()
+```
+
+## 3.3 Basic Panel Models
+
+### Pooled OLS
+
+```{r crime4-pooled}
+# Pooled OLS with year dummies
+crime.pooled <- lm(log(crimerate) ~ prbarr + prbconv + log(polpc) + 
+                     log(density) + factor(year), 
+                   data = crime4)
+summary(crime.pooled)
+```
+
+### Fixed Effects
+
+```{r crime4-fe}
+# Fixed Effects (county level)
+crime.fe <- plm(log(crimerate) ~ prbarr + prbconv + log(polpc) + log(density),
+                data = crime4,
+                index = c("county", "year"),
+                model = "within",
+                effect = "individual")
+summary(crime.fe)
+```
+
+**Interpretation**: Within the same county over time:
+- Increasing arrest probability by 0.1 (10 percentage points) reduces log crime rate by 3.7%
+- This controls for county-specific factors like culture, geography, judicial system efficiency
+
+### Two-way Fixed Effects
+
+```{r crime4-twoway}
+# Two-way Fixed Effects
+crime.twoway <- plm(log(crimerate) ~ prbarr + prbconv + log(polpc) + log(density),
+                    data = crime4,
+                    index = c("county", "year"),
+                    model = "within",
+                    effect = "twoways")
+summary(crime.twoway)
+```
+
+### Random Effects
+
+```{r crime4-re}
+# Random Effects
+crime.re <- plm(log(crimerate) ~ prbarr + prbconv + log(polpc) + log(density),
+                data = crime4,
+                index = c("county", "year"),
+                model = "random")
+summary(crime.re)
+```
+
+### Model Tests
+
+```{r crime4-tests}
+# Hausman test
+phtest(crime.fe, crime.re)
+
+# Test for serial correlation
+pbgtest(crime.fe)
+
+# Test for cross-sectional dependence
+pcdtest(crime.fe)
+```
+
+## 3.4 Alternative Specifications
+
+### Alternative 1: Deterrence Focus
+
+```{r crime4-alt1}
+# Deterrence index with interaction effects
+crime4$det_index <- crime4$prbarr * crime4$prbconv
+crime4$log_wage <- log(crime4$wcon + 1)
+
+crime.alt1 <- plm(log(crimerate) ~ prbarr + prbconv + det_index + 
+                    log(polpc) + log_wage,
+                  data = crime4,
+                  index = c("county", "year"),
+                  model = "within",
+                  effect = "twoways")
+summary(crime.alt1)
+```
+
+
+## 3.5 Model Comparison and Visualization
+
+```{r crime4-comparison}
+# Compare models
+stargazer(crime.pooled, crime.fe, crime.twoway, crime.alt1,
+          type = "text",
+          title = "Comparison of Crime Rate Models",
+          column.labels = c("Pooled OLS", "Fixed Effects", "Two-way FE", "Deterrence"),
+          keep.stat = c("n", "rsq", "adj.rsq"))
+```
+
+```{r crime4-viz-urban}
+# Visualize crime patterns by urban status
+crime_summary <- crime4 %>%
+  group_by(year, urban) %>%
+  summarise(avg_crime = mean(crimerate, na.rm = TRUE),
+            .groups = 'drop')
+
+ggplot(crime_summary, aes(x = year, y = avg_crime, color = factor(urban))) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Crime Rates: Urban vs Rural Counties",
+       x = "Year",
+       y = "Average Crime Rate",
+       color = "Urban") +
+  theme_minimal()
+```
+
+# Part 5: Practice Exercises
+
+## Exercise 1: Rental Dataset
+Test whether student density has a different effect in 1990 compared to 1980
+
+```{r exercise1}
+# Create interaction term
+rental$enr_p_y90 <- rental$enr_p * rental$y90
+
+# Estimate model with interaction
+rental.interact <- plm(lrent ~ enr_p + lpop + lavginc + y90 + enr_p_y90,
+                       data = rental,
+                       index = c("city", "year"),
+                       model = "within",
+                       effect = "individual")
+summary(rental.interact)
+
+# Test if interaction is significant
+linearHypothesis(rental.interact, "enr_p_y90 = 0")
+```
+
+
+## Exercise 2: Crime4 Dataset
+Test for the presence of time effects
+
+```{r exercise3}
+# F-test for time effects
+# Compare individual effects only vs two-way effects
+pFtest(crime.twoway, crime.fe)
+
+# Alternative: Include year dummies manually
+crime.time <- plm(log(crimerate) ~ prbarr + prbconv + log(polpc) + 
+                    log(density) + factor(year),
+                  data = crime4,
+                  index = c("county", "year"),
+                  model = "within",
+                  effect = "individual")
+
+# Test joint significance of time dummies
+# This would require linearHypothesis with all year coefficients
+```
+
+# Summary and Key Takeaways
+
+## Key Points
+
+
+   - Start with pooled OLS to establish baseline
+   
+   - Test for individual effects using F-test
+   
+   - Use Hausman test to choose between FE and RE
+   
+   - Consider two-way FE if time effects are important
+
+
+   - Test for non-linearities and interactions
+   
+   - Check robustness to different functional forms
+   
+   - Be aware of the trade-offs between different estimators
+
+## References
+
+Wooldridge, J. M. (2010). Econometric analysis of cross section and panel data. MIT press.
+
+Croissant, Y., & Millo, G. (2008). Panel data econometrics in R: The plm package. Journal of statistical software, 27(2), 1-43.
