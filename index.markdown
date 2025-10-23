@@ -21,10 +21,6 @@ title: Lorenzo Rossi
         Management and Quantitative Methods<br>
         University of Milan
       </p>
-      <p style="font-size: 0.8em; line-height: 1.4; color: #666; margin-top: 8px;">
-        MSc in Data Science and Economics<br>
-        University of Milan
-      </p>
 
       <!-- Social icons -->
       <div style="margin-top: 10px;">
@@ -54,7 +50,7 @@ title: Lorenzo Rossi
       <h2 style="color: #111;">About Me</h2>
       <p style="font-size: 1em; line-height: 1.7; color: #444;">
         I am a Ph.D. Candidate at the Department of Economics, Management and Quantitative Methods of 
-        <a href="https://demm.unimi.it/it" style="color: #007acc;">University of Milan</a> and at the Department of Economics and Management of <a href="https://economiaemanagement.dip.unipv.it/en" style="color: #007acc;">University of Pavia</a>.
+        <a href="https://demm.unimi.it/it" style="color: #007acc;">University of Milan</a> and at the Department of Economics and Management of <a href="https://economiaemanagement.dip.unipv.it/en" style="color: #007acc;">University of Pavia</a>. I hold a MSc in Data Science and Economics from University of Milan.
       </p>
 
       <p style="font-weight: bold; margin-top: 30px;">My research interests include:</p>
