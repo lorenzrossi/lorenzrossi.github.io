@@ -27,6 +27,9 @@ title: Lorenzo Rossi
         <a href="mailto:lorenzo.rossi1@unimi.it" title="Email">
           <img src="https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/maildotru.svg" width="20" style="margin: 0 8px;">
         </a>
+        <a href="https://orcid.org/0009-0009-4269-7516" title="ORCID" target="_blank">
+          <img src="https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/orcid.svg" width="20" style="margin: 0 8px;" alt="ORCID">
+        </a>
         <a href="https://www.linkedin.com/in/lorenzo-rossi-227979168" title="LinkedIn" target="_blank">
           <img src="https://upload.wikimedia.org/wikipedia/commons/8/81/LinkedIn_icon.svg" width="20" style="margin: 0 8px;" alt="LinkedIn">
         </a>
